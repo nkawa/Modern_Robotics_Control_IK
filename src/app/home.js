@@ -104,30 +104,6 @@ export default function DynamicHome(props) {
   // Theta guess for Newton's method in inverse kinematics
   const [theta_body_guess, setThetaBodyGuess] = React.useState(theta_body);
 
-  /*** Dynamics VR Animation ***/
-  const [qHistQueue, setQHistQueue] = React.useState([]);
-  const animatingRef = React.useRef(false);
-  React.useEffect(() => {
-    if (animatingRef.current) return;
-    if (qHistQueue.length === 0) return;
-    animatingRef.current = true;
-    const q_hist = qHistQueue[0];
-    let idx = 0;
-    function animate() {
-      if (!q_hist) return;
-      if (idx < q_hist.length) {
-        setThetaBody(q_hist[idx]);
-        idx += 1;
-        // console.log('setThetaBody:', idx, q_hist.length, q_hist[idx]);
-        setTimeout(animate, 1); 
-      } else {
-        setThetaBodyGuess(q_hist[q_hist.length - 1]);
-        animatingRef.current = false;
-        setQHistQueue(queue => queue.slice(1));
-      }
-    }
-    animate();
-  }, [qHistQueue]);
 
   // Foward Kinematics solution
   const T0 = mr.FKinBody(M, Blist, theta_body);
@@ -176,33 +152,6 @@ export default function DynamicHome(props) {
     }
   }
 
-  /** Dynamics Control **/
-  function DynamicsControl(newPos, newEuler) {
-    const T_sd = mr.RpToTrans(mr.EulerToRotMat(newEuler, Euler_order), newPos);
-    const [thetalist_sol, ik_success] = mr.IKinBody(Blist, M, T_sd, theta_body_guess, 1e-5, 1e-5);
-
-    const thetalist_sol_limited = thetalist_sol.map((theta, i) =>
-      Math.max(jointLimits[i].min, Math.min(jointLimits[i].max, theta))
-      );
-
-    const dt = 0.01;
-    const steps = 200;
-
-    const q0 = theta_body.slice();
-    const dq0 = Array(q0.length).fill(0);
-
-    const q_ref = thetalist_sol_limited.slice();
-    const dq_ref = Array(q0.length).fill(0);
-    
-    const [q_hist, dq_hist] = mr.simulate_PIDcontrol(q0, dq0, q_ref, dq_ref, dt, steps, Mlist, Glist, Slist, Kplist, Kilist, Kdlist)
-
-    if (ik_success) {
-      setQHistQueue(queue => [...queue, q_hist]); 
-    } 
-    else {
-      console.warn("IK failed to converge");
-    }
-  }
 
   /* VR Controller Simulation */
   const lastPosRef = React.useRef(controller_object.position.clone());
@@ -269,79 +218,6 @@ export default function DynamicHome(props) {
       const deltaEuler_Three = [deltaEuler.x, deltaEuler.y, deltaEuler.z];
       const deltaEuler_World = mr.three2world(deltaEuler_Three);
 
-      // console.log('ΔPosition:', deltaPos, 'ΔEuler:', deltaEuler);
-
-      /* 
-      * VR Input Method
-      */
-      // Speed
-      // const speedPos = {
-      //   x: deltaPos_World[0] / dt,
-      //   y: deltaPos_World[1] / dt,
-      //   z: deltaPos_World[2] / dt
-      // };
-      // const speedEuler = {
-      //   x: deltaEuler_World[0] / dt,
-      //   y: deltaEuler_World[1] / dt,
-      //   z: deltaEuler_World[2] / dt
-      // };
-
-      // Limited Speed
-      // const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
-
-      // const speedPos = {
-      //   x: clamp(deltaPos_World[0] / dt, -0.001, 0.001),
-      //   y: clamp(deltaPos_World[1] / dt, -0.001, 0.001),
-      //   z: clamp(deltaPos_World[2] / dt, -0.001, 0.001)
-      // };
-      // const speedEuler = {
-      //   x: clamp(deltaEuler_World[0] / dt, -0.002, 0.002),
-      //   y: clamp(deltaEuler_World[1] / dt, -0.002, 0.002),
-      //   z: clamp(deltaEuler_World[2] / dt, -0.002, 0.002)
-      // };
-
-      // Vertial Inpedance
-      const Kp_VR = [80, 120, 80, 15, 15, 12]; 
-      const Kd_VR = [18, 20, 18, 1.8, 1.5, 1.2];    
-      const M_VR = [1, 1, 1, 0.10, 0.10, 0.10];    
-
-      let v = v_imp_ref.current.slice();
-
-      const ForcePos = {
-        x: Kp_VR[0] * deltaPos_World[0] + Kd_VR[0] * (deltaPos_World[0] / dt),
-        y: Kp_VR[1] * deltaPos_World[1] + Kd_VR[1] * (deltaPos_World[1] / dt),
-        z: Kp_VR[2] * deltaPos_World[2] + Kd_VR[2] * (deltaPos_World[2] / dt)
-      }
-      const ForceEuler = {
-        x: Kp_VR[3] * deltaEuler_World[0] + Kd_VR[3] * (deltaEuler_World[0] / dt),
-        y: Kp_VR[4] * deltaEuler_World[1] + Kd_VR[4] * (deltaEuler_World[1] / dt),
-        z: Kp_VR[5] * deltaEuler_World[2] + Kd_VR[5] * (deltaEuler_World[2] / dt)
-      }
-
-      const accPos = {
-        x: ForcePos.x / M_VR[0],
-        y: ForcePos.y / M_VR[1],
-        z: ForcePos.z / M_VR[2]
-      };
-      const accEuler = {
-        x: ForceEuler.x / M_VR[3],
-        y: ForceEuler.y / M_VR[4],
-        z: ForceEuler.z / M_VR[5]
-      };
-
-      const speedPos = {
-        x: v[0] + accPos.x * dt,
-        y: v[1] + accPos.y * dt,
-        z: v[2] + accPos.z * dt
-      };
-      const speedEuler = {
-        x: v[3] + accEuler.x * dt,
-        y: v[4] + accEuler.y * dt,
-        z: v[5] + accEuler.z * dt
-      };
-
-      // console.log('Translation Speed:', speedPos, 'Rotation Speed:', speedEuler, 'dt(s):', dt);
-
       /**
        * Inverse Kinematics Control
        */
@@ -349,14 +225,14 @@ export default function DynamicHome(props) {
       const currentEuler = [...euler_ee];
 
       const newPos = [
-        currentPos[0] + speedPos.x * dt,
-        currentPos[1] + speedPos.y * dt,
-        currentPos[2] + speedPos.z * dt
+        currentPos[0] + deltaPos_World[0],
+        currentPos[1] + deltaPos_World[1],
+        currentPos[2] + deltaPos_World[2]
       ];
       const newEuler = [
-        currentEuler[0] + speedEuler.z * dt,
-        currentEuler[1] - speedEuler.y * dt,
-        currentEuler[2] - speedEuler.x * dt
+        currentEuler[0] + deltaEuler_World[0],
+        currentEuler[1] + deltaEuler_World[1],
+        currentEuler[2] + deltaEuler_World[2]
       ];
 
       KinamaticsControl(newPos, newEuler);
@@ -433,8 +309,8 @@ export default function DynamicHome(props) {
     theta_tool, setThetaTool,
     position_ee, setPositionEE,
     euler_ee, setEuler,
-    // onTargetChange: KinamaticsControl,
-    onTargetChange: DynamicsControl
+    onTargetChange: KinamaticsControl,
+    // onTargetChange: DynamicsControl
   }), [
     robotName, robotNameList, set_robotName,
     toolName, toolNameList, set_toolName,
@@ -446,8 +322,8 @@ export default function DynamicHome(props) {
     theta_tool, setThetaTool,
     position_ee, setPositionEE,
     euler_ee, setEuler,
-    // KinamaticsControl,
-    DynamicsControl
+    KinamaticsControl,
+    // DynamicsControl
   ]);
 
   // VRController Inputs (Aframe Components)
