@@ -24,7 +24,7 @@ export default function useMqtt({
   // define the joint handler for incoming messages
   const handler = (topic, message) => {
     let data;
-    console.log("收到MQTT Message:", topic, message.toString());
+    // console.log("收到MQTT Message:", topic, message.toString());
     try {
       data = JSON.parse(message.toString());
     } catch (e) {

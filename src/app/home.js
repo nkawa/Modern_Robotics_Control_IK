@@ -158,7 +158,7 @@ export default function DynamicHome(props) {
   const lastEulerRef = React.useRef(controller_object.rotation.clone());
   // const lastQuatRef = React.useRef(controller_object.quaternion.clone());
 
-  const v_imp_ref = React.useRef([0, 0, 0, 0, 0, 0]);
+  // const v_imp_ref = React.useRef([0, 0, 0, 0, 0, 0]);
   React.useEffect(() => {
     // VR input period
     const dt = 16.5/1000;
@@ -212,10 +212,10 @@ export default function DynamicHome(props) {
       };
       
       // calculate the difference in position and orientation
-      const deltaPos_Three = [deltaPos.x, deltaPos.y, deltaPos.z];
+      const deltaPos_Three = [deltaPos.x, deltaPos.y, deltaPos.z].map(x=>x*0.25);
       const deltaPos_World = mr.three2world(deltaPos_Three);
 
-      const deltaEuler_Three = [deltaEuler.x, deltaEuler.y, deltaEuler.z];
+      const deltaEuler_Three = [deltaEuler.x, deltaEuler.y, deltaEuler.z].map(x=>x*0.25);
       const deltaEuler_World = mr.three2world(deltaEuler_Three);
 
       /**
@@ -239,10 +239,10 @@ export default function DynamicHome(props) {
       
       const Pos_scale = 0.50; 
       const Euler_scale = 0.38;
-      v_imp_ref.current = [
-        Pos_scale*speedPos.x, Pos_scale*speedPos.y, Pos_scale*speedPos.z,
-        Euler_scale*speedEuler.x, Euler_scale*speedEuler.y, Euler_scale*speedEuler.z
-      ];
+      // v_imp_ref.current = [
+      //   Pos_scale*speedPos.x, Pos_scale*speedPos.y, Pos_scale*speedPos.z,
+      //   Euler_scale*speedEuler.x, Euler_scale*speedEuler.y, Euler_scale*speedEuler.z
+      // ];
       // console.log('Virtual velocity:', v_imp_ref.current);
 
       /**
@@ -251,9 +251,11 @@ export default function DynamicHome(props) {
       // DynamicsControl(newPos, newEuler);
 
     }
-    // Update last position and orientation
-    lastPosRef.current.copy(controller_object.position);
-    lastEulerRef.current.copy(controller_object.rotation);
+    if (!trigger_on) {
+      // Update last position and orientation
+      lastPosRef.current.copy(controller_object.position);
+      lastEulerRef.current.copy(controller_object.rotation);
+    }
   }, [
     controller_object.position.x,
     controller_object.position.y,

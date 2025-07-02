@@ -39,6 +39,7 @@ const Model = (props) => {
                 <a-entity j_id="5" gltf-model="#j5" position={`0 0 0`} rotation={`${theta5-90} 0 0`}>
                   {/* J6 */}
                   <a-entity j_id="6" gltf-model="#j6" position={`0 0 0`} rotation={`0 0 ${theta6}`}>
+                    <a-entity end-link position="0 0 0" quaterion="1 0 0 0" />
                     {/* Tool */}
                       <a-entity gltf-model="#j6_1" position={`${finger_pos} 0 ${L_56+L_ee}`}></a-entity>
                       <a-entity gltf-model="#j6_2" position={`${-finger_pos} 0 ${L_56+L_ee}`}></a-entity>
