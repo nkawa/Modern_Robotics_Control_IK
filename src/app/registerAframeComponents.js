@@ -19,6 +19,7 @@ export default function registerAframeComponents(options) {
     Euler_order,
     props,
     onXRFrameMQTT,
+    endLinkPose,
   } = options;
   
   // set rendered state after a short delay to ensure the scene is ready
@@ -129,46 +130,31 @@ export default function registerAframeComponents(options) {
       });
     }
   });
-
   // ****************
   // Dedicated component for "end-link"
-  // this monitors the end-link pose and call a set function of useState when it moves
+  // this monitors the end-link pose and sets the useRef variable
+  // when it moves
   //
   AFRAME.registerComponent('end-link', {
     init() {
-      // this.lastPos = new THREE.Vector3();
-      // this.lastQuat = new THREE.Quaternion();
       this.lastPose = new THREE.Matrix4();
     },
     tick() {
       const obj = this.el.object3D;
       if (!obj.matrixWorld) return; // not yet initialized
-      if (!this._my_init_flag) {
-	// const pos = new THREE.Vector3();
-	// const quat = new THREE.Quaternion();
-	// pos.setFromMatrixPosition(obj.matrixWorld);
-	// quat.setFromRotationMatrix(obj.matrixWorld);
-	this.lastPose.copy(obj.matrixWorld);
-	this._my_init_flag = true;
-	console.log(' end-link has initialized');
-      } else {
-	// const wPos = new THREE.Vector3();
-	// const wQuat = new THREE.Quaternion();
-	// wPos.setFromMatrixPosition(obj.matrixWorld);
-	// wQuat.setFromRotationMatrix(obj.matrixWorld);
-	// if (!wPos.equals(this.lastPos) || !wQuat.equals(this.lastQuat)) {
-	const pose = obj.matrixWorld;
+
+      const pose = obj.matrixWorld;
+      if (this._my_init_flag) {
 	if (!pose.equals(this.lastPose)) {
-	  console.log('End-link moved!');
-	  const wPos = new THREE.Vector3();
-	  const wQuat = new THREE.Quaternion();
-	  wPos.setFromMatrixPosition(pose);
-	  wQuat.setFromRotationMatrix(pose);
-	  console.log(` wPos:  (${wPos.x.toFixed(3)}, ${wPos.y.toFixed(3)}, ${wPos.z.toFixed(3)})`);
-	  console.log(` wQuat: (${wQuat.w.toFixed(3)}: ${wQuat.x.toFixed(3)}, ${wQuat.y.toFixed(3)}, ${wQuat.z.toFixed(3)})`);
-	  this.lastPose.copy(pose);
+	  // console.log('end-link Moved !!'
+	  endLinkPose.current.copy(pose);
 	}
+      } else {
+	endLinkPose.current.copy(pose);
+	this._my_init_flag = true;
       }
+      this.lastPose.copy(pose);
     }
   });
+
 }

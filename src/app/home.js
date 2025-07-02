@@ -68,7 +68,9 @@ export default function DynamicHome(props) {
 
   // Frame ID
   const reqIdRef = React.useRef()
-  
+  // The pose of the end link
+  const endLinkPose = React.useRef(new THREE.Matrix4());
+  const startPose = React.useRef(new THREE.Matrix4());
   // Animation loop
   const loop = ()=>{
     reqIdRef.current = window.requestAnimationFrame(loop) 
@@ -251,10 +253,14 @@ export default function DynamicHome(props) {
       // DynamicsControl(newPos, newEuler);
 
     }
-    if (!trigger_on) {
-      // Update last position and orientation
-      lastPosRef.current.copy(controller_object.position);
-      lastEulerRef.current.copy(controller_object.rotation);
+    // Update last position and orientation
+    lastPosRef.current.copy(controller_object.position);
+    lastEulerRef.current.copy(controller_object.rotation);
+    if (!trigger_on ||
+	startPose.current.equals(new THREE.Matrix4().identity())) {
+      startPose.current.copy(endLinkPose.current);
+      console.log('set startPose');
+      // console.log(startPose.current.elements);
     }
   }, [
     controller_object.position.x,
@@ -345,6 +351,7 @@ export default function DynamicHome(props) {
       Euler_order,
       props,
       onXRFrameMQTT,
+      endLinkPose,
     });
   }, []);
 
