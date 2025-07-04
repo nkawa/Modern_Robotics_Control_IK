@@ -31,6 +31,16 @@ const MQTT_DEVICE_TOPIC = "dev/" + idtopic;
 const MQTT_CTRL_TOPIC = "vr/"; 
 const MQTT_ROBOT_STATE_TOPIC = "robot/";
 
+// three2worldに相当、すなわち ^W T_3 変換行列
+// 16個の値の配列(列優先、column-major 順)で Matrix4 を初期化
+const three2worldMat
+ = new THREE.Matrix4().fromArray([0, -1, 0, 0,   // 1列目
+				  0, 0, 1, 0,   // 2列目
+				  -1, 0, 0, 0,   // 3列目
+				  0, 0, 0, 1    // 4列目平行移動
+				 ]);
+const world2threeMat = three2worldMat.clone().transpose(); // 逆行列
+
 export default function DynamicHome(props) {
   const [now, setNow] = React.useState(new Date())
   const [rendered,set_rendered] = React.useState(false)
@@ -70,7 +80,8 @@ export default function DynamicHome(props) {
   const reqIdRef = React.useRef()
   // The pose of the end link
   const endLinkPose = React.useRef(new THREE.Matrix4());
-  const startPose = React.useRef(new THREE.Matrix4());
+  const endLinkPoseStart = React.useRef(new THREE.Matrix4());
+  const controllerStartInv = React.useRef(new THREE.Matrix4());
   // Animation loop
   const loop = ()=>{
     reqIdRef.current = window.requestAnimationFrame(loop) 
@@ -137,8 +148,20 @@ export default function DynamicHome(props) {
    * /
    * 
   /** Kinamatics Control **/
+  function KinematicsControl(tf) {
+    const T_sd = [
+      [tf.elements[0], tf.elements[4], tf.elements[8], tf.elements[12]],
+      [tf.elements[1], tf.elements[5], tf.elements[9], tf.elements[13]],
+      [tf.elements[2], tf.elements[6], tf.elements[10], tf.elements[14]],
+      [0, 0, 0, 1]];
+    KinamaticsControlAux(T_sd);
+  }
   function KinamaticsControl(newPos, newEuler) {
     const T_sd = mr.RpToTrans(mr.EulerToRotMat(newEuler, Euler_order), newPos);
+    KinamaticsControlAux(T_sd);
+  }
+  function KinamaticsControlAux(T_sd)
+  {
     const [thetalist_sol, ik_success] = mr.IKinBody(Blist, M, T_sd, theta_body_guess, 1e-5, 1e-5);
 
     if (ik_success) {
@@ -237,7 +260,67 @@ export default function DynamicHome(props) {
         currentEuler[2] + deltaEuler_World[2]
       ];
 
-      KinamaticsControl(newPos, newEuler);
+
+
+      // w_S^{-1}: start^-1: controllerStartInv.current
+      // w_G: goal: controllerCurrentWorld
+      // w_B: begin: endLinkPoseStart.current
+      // w_E: end: to be calculated
+      const controllerCurrentWorld = three2worldMat.clone().multiply(controller_object.matrixWorld);
+      const controllerDiff = controllerStartInv.current.clone().multiply(controllerCurrentWorld);
+      const startTbegin = controllerStartInv.current.clone().multiply(endLinkPoseStart.current);
+      startTbegin.extractRotation(startTbegin);
+      const beginTstart = startTbegin.clone().transpose();
+      //
+      // reduce controller movement by 0.25 -- 1.00
+      const magnification = 0.60;
+      const posDiff = new THREE.Vector3();
+      const quatDiff = new THREE.Quaternion();
+      const scale = new THREE.Vector3();
+      controllerDiff.decompose(posDiff, quatDiff, scale);
+      const quaterPosDiff = posDiff.clone().multiplyScalar(magnification);
+      console.log('quaterPosDiff: ' + quaterPosDiff.x.toFixed(3) + ', ' +
+		      quaterPosDiff.y.toFixed(3) + ', ' + quaterPosDiff.z.toFixed(3));
+      const quaterQuatDiff = quatDiff.clone(); // .multiplyScalar(0.25);
+      quaterQuatDiff.x *= magnification;
+      quaterQuatDiff.y *= magnification;
+      quaterQuatDiff.z *= magnification;
+      const wAbs = Math.sqrt(1.0 - (quaterQuatDiff.x**2
+				    + quaterQuatDiff.y**2
+				    + quaterQuatDiff.z**2));
+      quaterQuatDiff.w = quaterQuatDiff.w >= 0 ? wAbs : -wAbs;
+      const scale1 = new THREE.Vector3(1, 1, 1);
+      const matrixDiff = new THREE.Matrix4();
+      matrixDiff.compose(quaterPosDiff, quaterQuatDiff, scale1);
+      //
+      const newEndLinkPose = endLinkPoseStart.current.clone()
+	    .multiply(startTbegin).multiply(matrixDiff)
+	    .multiply(beginTstart);
+      //
+      // **** for debug printing purpose ****
+      // const newPosition = new THREE.Vector3();
+      // const newRotation = new THREE.Quaternion();
+      // newEndLinkPose.decompose(newPosition, newRotation, scale);
+      // // console.log('quaternion START: ', rotation);
+      // const newEuler1 = new THREE.Euler().setFromQuaternion(newRotation,
+      // 							    Euler_order);
+
+      // const startPosition = new THREE.Vector3();
+      // const startRotation = new THREE.Quaternion();
+      // endLinkPoseStart.current.decompose(startPosition, startRotation, scale);
+      // // // console.log('endLinkPoseStart: ', endLinkPoseStart.current.elements);
+      // // console.log('currentPos: ', currentPos);
+      // // console.log('startPosition: ', startPosition);
+      // // console.log('newPos: ', newPos);
+      // // console.log('newPosition: ', newPosition);
+      // // // console.log('euler_ee: ', euler_ee);
+      // // // console.log('currentEuler: ', currentEuler);
+      // // console.log('newEuler: ', newEuler);
+      // // console.log('newEuler1: ', newEuler1);
+
+      
+      // KinamaticsControl(newPos, newEuler);
+      KinematicsControl(newEndLinkPose);
       
       const Pos_scale = 0.50; 
       const Euler_scale = 0.38;
@@ -257,10 +340,13 @@ export default function DynamicHome(props) {
     lastPosRef.current.copy(controller_object.position);
     lastEulerRef.current.copy(controller_object.rotation);
     if (!trigger_on ||
-	startPose.current.equals(new THREE.Matrix4().identity())) {
-      startPose.current.copy(endLinkPose.current);
-      console.log('set startPose');
-      // console.log(startPose.current.elements);
+	endLinkPoseStart.current.equals(new THREE.Matrix4().identity())) {
+      endLinkPoseStart.current = three2worldMat.clone().multiply(endLinkPose.current);
+      // console.log('set endLinkPoseStart ' + endLinkPoseStart.current.elements);
+    }
+    if (!trigger_on || controllerStartInv.current.equals(new THREE.Matrix4().identity())) {
+      controllerStartInv.current = three2worldMat.clone().multiply(controller_object.matrixWorld).invert();
+      // console.log('set controllerStartInv ' + controllerStartInv.current.elements);
     }
   }, [
     controller_object.position.x,

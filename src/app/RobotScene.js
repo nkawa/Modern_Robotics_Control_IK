@@ -65,7 +65,8 @@ export default function RobotScene(props) {
             position={`${position_ee[0]} ${position_ee[1]} ${position_ee[2]}`} 
             scale="0.012 0.012 0.012" 
             color={target_error ? "red" : "yellow"} 
-            visible={true}></a-sphere>
+            visible={true}>
+          </a-sphere>
           <a-entity
             position={`${position_ee[0]} ${position_ee[1]} ${position_ee[2]}`}
 
@@ -77,13 +78,15 @@ export default function RobotScene(props) {
             rotation={`${euler_ee_deg[0]} ${-euler_ee_deg[2]} ${-euler_ee_deg[1]} `}
           >
             {/* ZYZ */}
-            {/* <a-cylinder position="0 0 -0.015" rotation="90 0 0" height="0.0250" radius="0.0015" color="red" />
+            {/*
+            <a-cylinder position="0 0 -0.015" rotation="90 0 0" height="0.0250" radius="0.0015" color="red" />
             <a-cylinder position="-0.015 0 0" rotation="0 0 90" height="0.0250" radius="0.0015" color="green" />
-            <a-cylinder position="0 0.025 0" rotation="0 90 0" height="0.0550" radius="0.0015" color="blue" /> */}
+            <a-cylinder position="0 0.025 0" rotation="0 90 0" height="0.0550" radius="0.0015" color="blue" />
+            */}
             {/* ZYX */}
-            <a-cylinder position="0      0     -0.015" rotation="90 0  0 " height="0.0250" radius="0.0015" color="red" /> 
-            <a-cylinder position="-0.015      0     0" rotation="0  0  90" height="0.0250" radius="0.0015" color="green" />
-            <a-cylinder position="0      0.025      0" rotation="0  90 0 " height="0.0550" radius="0.0015" color="blue" />
+            <a-cylinder position="0      0 -0.015" rotation="90 0  0 " height="0.0250" radius="0.0015" color="red" /> 
+            <a-cylinder position="-0.015 0      0" rotation="0  0 90" height="0.0250" radius="0.0015" material="color: #00ff00" />
+            <a-cylinder position="0      0.025  0" rotation="0  90 0 " height="0.0550" radius="0.0015" color="blue" />
           </a-entity>
 
           {/* VR Controller Pose */}

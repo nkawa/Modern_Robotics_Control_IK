@@ -1,5 +1,15 @@
 let registered = false;
 
+// three2worldに相当、すなわち ^W T_3 変換行列
+// 16個の値の配列(列優先、column-major 順)で Matrix4 を初期化
+const three2worldMat
+ = new THREE.Matrix4().fromArray([0, -1, 0, 0,   // 1列目
+				  0, 0, 1, 0,   // 2列目
+				  -1, 0, 0, 0,   // 3列目
+				  0, 0, 0, 1    // 4列目平行移動
+				 ]);
+const world2threeMat = three2worldMat.clone().transpose(); // 逆行列
+
 export default function registerAframeComponents(options) {
   if (registered) return;
   registered = true;
@@ -53,11 +63,28 @@ export default function registerAframeComponents(options) {
       this.el.addEventListener('bbuttondown', () => set_button_b_on(true));
       this.el.addEventListener('bbuttonup', () => set_button_b_on(false));
 
+      this.lastPose = new THREE.Matrix4();
     },
-    update: function () {
-      if (this.el.object3D !== controller_object) {
-        set_controller_object(this.el.object3D);
+    tick: function () {
+      const obj = this.el.object3D;
+      if (!obj.matrixWorld) return; // not yet initialized
+      const pose = obj.matrixWorld;
+      if (this._my_init_flag) {
+	if (!pose.equals(this.lastPose)) {
+          set_controller_object(this.el.object3D);
+	  //
+	  // **** debugging output ****
+	  const position = new THREE.Vector3();
+	  position.setFromMatrixPosition(this.el.object3D.matrixWorld);
+	  position.applyMatrix4(three2worldMat); // convert to world coordinates
+	  console.log("controller position: " + position.x.toFixed(3)
+		      + ", " + position.y.toFixed(3) + ", " + position.z.toFixed(3));
+	}
+      } else {
+	set_controller_object(this.el.object3D);
+	this._my_init_flag = true;
       }
+      this.lastPose.copy(pose);
     }
   });
 
@@ -146,8 +173,19 @@ export default function registerAframeComponents(options) {
       const pose = obj.matrixWorld;
       if (this._my_init_flag) {
 	if (!pose.equals(this.lastPose)) {
-	  // console.log('end-link Moved !!'
+	  // console.log('end-link Moved !!');
 	  endLinkPose.current.copy(pose);
+	  // **** debugging output ****
+	  // const position = new THREE.Vector3();
+	  // position.setFromMatrixPosition(pose);
+	  // position.applyMatrix4(world2threeMat); // convert to world coordinates
+	  // console.log("end link position: " + position.x.toFixed(3)
+	  // 	      + ", " + position.y.toFixed(3) + ", " + position.z.toFixed(3));
+	  //
+	  // console.log("end link position: " + position.x + ", " + position.y + ", " + position.z);
+	  // const quat = new THREE.Quaternion();
+	  // quat.setFromRotationMatrix(pose);
+	  // console.log("end link quat: " + quat.x + ", " + quat.y + ", " + quat.z + ", w:" + quat.w);
 	}
       } else {
 	endLinkPose.current.copy(pose);
