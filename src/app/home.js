@@ -5,6 +5,7 @@ import RobotScene from './RobotScene';
 import registerAframeComponents from './registerAframeComponents'; 
 import useMqtt from './useMqtt';
 import { mqttclient,idtopic, publishMQTT, codeType } from '../lib/MetaworkMQTT'
+import { three2worldMatGen, world2threeMatGen } from './constTransformGen';
 
 const THREE = window.AFRAME.THREE;
 const mr = require('../modern_robotics/modern_robotics_core.js');
@@ -31,17 +32,10 @@ const MQTT_DEVICE_TOPIC = "dev/" + idtopic;
 const MQTT_CTRL_TOPIC = "vr/"; 
 const MQTT_ROBOT_STATE_TOPIC = "robot/";
 
-// three2worldに相当、すなわち ^W T_3 変換行列
-// 16個の値の配列(列優先、column-major 順)で Matrix4 を初期化
-const three2worldMat
- = new THREE.Matrix4().fromArray([0, -1, 0, 0,   // 1列目
-				  0, 0, 1, 0,   // 2列目
-				  -1, 0, 0, 0,   // 3列目
-				  0, 0, 0, 1    // 4列目平行移動
-				 ]);
-const world2threeMat = three2worldMat.clone().transpose(); // 逆行列
-
 export default function DynamicHome(props) {
+  const three2worldMat = three2worldMatGen();
+  const world2threeMat = world2threeMatGen();
+
   const [now, setNow] = React.useState(new Date())
   const [rendered,set_rendered] = React.useState(false)
   const robotNameList = ["Model"]
@@ -178,90 +172,10 @@ export default function DynamicHome(props) {
   }
 
 
-  /* VR Controller Simulation */
-  const lastPosRef = React.useRef(controller_object.position.clone());
-  const lastEulerRef = React.useRef(controller_object.rotation.clone());
-  // const lastQuatRef = React.useRef(controller_object.quaternion.clone());
-
-  // const v_imp_ref = React.useRef([0, 0, 0, 0, 0, 0]);
   React.useEffect(() => {
     // VR input period
     const dt = 16.5/1000;
     if (rendered && vrModeRef.current && trigger_on ) {
-      const deltaPos = {
-        x: controller_object.position.x - lastPosRef.current.x,
-        y: controller_object.position.y - lastPosRef.current.y,
-        z: controller_object.position.z - lastPosRef.current.z
-      };
-
-      /**
-       * Revelant Rotation 
-       * Use abusolute Euler angles or quaternion could cause drift, 
-       * especeially when VR controller is far from human body.
-       */
-
-      // current and last Euler angles of VR controller
-      const currentEuler_VR = [
-        controller_object.rotation.x,
-        controller_object.rotation.y,
-        controller_object.rotation.z
-      ];
-      const lastEuler_VR = [
-        lastEulerRef.current.x,
-        lastEulerRef.current.y,
-        lastEulerRef.current.z
-      ];
-
-      // revelant rotation matrix
-      const R_current = mr.EulerToRotMat(currentEuler_VR, Euler_order);
-      const R_last = mr.EulerToRotMat(lastEuler_VR, Euler_order);
-
-      function matTranspose(R) {
-        return R[0].map((_, i) => R.map(row => row[i]));
-      }
-      function matDot(A, B) {
-        return A.map((row, i) =>
-          B[0].map((_, j) =>
-            row.reduce((sum, a, k) => sum + a * B[k][j], 0)
-          )
-        );
-      }
-      const R_relative = matDot(R_current, matTranspose(R_last));
-
-      // revelant Euler angles
-      const deltaEuler_rev = mr.RotMatToEuler(R_relative, Euler_order); 
-      const deltaEuler = {
-        x: deltaEuler_rev[0], 
-        y: deltaEuler_rev[1],
-        z: deltaEuler_rev[2]
-      };
-      
-      // calculate the difference in position and orientation
-      const deltaPos_Three = [deltaPos.x, deltaPos.y, deltaPos.z].map(x=>x*0.25);
-      const deltaPos_World = mr.three2world(deltaPos_Three);
-
-      const deltaEuler_Three = [deltaEuler.x, deltaEuler.y, deltaEuler.z].map(x=>x*0.25);
-      const deltaEuler_World = mr.three2world(deltaEuler_Three);
-
-      /**
-       * Inverse Kinematics Control
-       */
-      const currentPos = [...position_ee];
-      const currentEuler = [...euler_ee];
-
-      const newPos = [
-        currentPos[0] + deltaPos_World[0],
-        currentPos[1] + deltaPos_World[1],
-        currentPos[2] + deltaPos_World[2]
-      ];
-      const newEuler = [
-        currentEuler[0] + deltaEuler_World[0],
-        currentEuler[1] + deltaEuler_World[1],
-        currentEuler[2] + deltaEuler_World[2]
-      ];
-
-
-
       // w_S^{-1}: start^-1: controllerStartInv.current
       // w_G: goal: controllerCurrentWorld
       // w_B: begin: endLinkPoseStart.current
@@ -279,8 +193,9 @@ export default function DynamicHome(props) {
       const scale = new THREE.Vector3();
       controllerDiff.decompose(posDiff, quatDiff, scale);
       const quaterPosDiff = posDiff.clone().multiplyScalar(magnification);
-      console.log('quaterPosDiff: ' + quaterPosDiff.x.toFixed(3) + ', ' +
-		      quaterPosDiff.y.toFixed(3) + ', ' + quaterPosDiff.z.toFixed(3));
+      // console.log('quaterPosDiff: ' + quaterPosDiff.x.toFixed(3)
+      // 		  + ', ' + quaterPosDiff.y.toFixed(3)
+      // 		  + ', ' + quaterPosDiff.z.toFixed(3));
       const quaterQuatDiff = quatDiff.clone(); // .multiplyScalar(0.25);
       quaterQuatDiff.x *= magnification;
       quaterQuatDiff.y *= magnification;
@@ -322,30 +237,18 @@ export default function DynamicHome(props) {
       // KinamaticsControl(newPos, newEuler);
       KinematicsControl(newEndLinkPose);
       
-      const Pos_scale = 0.50; 
-      const Euler_scale = 0.38;
-      // v_imp_ref.current = [
-      //   Pos_scale*speedPos.x, Pos_scale*speedPos.y, Pos_scale*speedPos.z,
-      //   Euler_scale*speedEuler.x, Euler_scale*speedEuler.y, Euler_scale*speedEuler.z
-      // ];
-      // console.log('Virtual velocity:', v_imp_ref.current);
-
-      /**
-       * Dynamics Control
-       */
-      // DynamicsControl(newPos, newEuler);
-
     }
     // Update last position and orientation
-    lastPosRef.current.copy(controller_object.position);
-    lastEulerRef.current.copy(controller_object.rotation);
     if (!trigger_on ||
 	endLinkPoseStart.current.equals(new THREE.Matrix4().identity())) {
-      endLinkPoseStart.current = three2worldMat.clone().multiply(endLinkPose.current);
-      // console.log('set endLinkPoseStart ' + endLinkPoseStart.current.elements);
+      endLinkPoseStart.current = three2worldMat.clone()
+	.multiply(endLinkPose.current);
+      // console.log('set endLinkPoseStart '+ endLinkPoseStart.current.elements);
     }
-    if (!trigger_on || controllerStartInv.current.equals(new THREE.Matrix4().identity())) {
-      controllerStartInv.current = three2worldMat.clone().multiply(controller_object.matrixWorld).invert();
+    if (!trigger_on ||
+	controllerStartInv.current.equals(new THREE.Matrix4().identity())) {
+      controllerStartInv.current = three2worldMat.clone()
+	.multiply(controller_object.matrixWorld).invert();
       // console.log('set controllerStartInv ' + controllerStartInv.current.elements);
     }
   }, [
@@ -358,17 +261,6 @@ export default function DynamicHome(props) {
     rendered,
     trigger_on,
   ]);
-
-  // const vr_controller_pos = [
-  // controller_object.position.x,
-  // controller_object.position.y,
-  // controller_object.position.z
-  // ];
-  // const vr_controller_euler = [
-  //   controller_object.rotation.x,
-  //   controller_object.rotation.y,
-  //   controller_object.rotation.z
-  // ];
 
   // Gripper Control 
   function clampTool(value) {
