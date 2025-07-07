@@ -1,5 +1,6 @@
 import {three2worldMatGen, world2threeMatGen} from './constTransformGen'
 let registered = false;
+let debugBuffer = [];
 
 export default function registerAframeComponents(options) {
   const three2worldMat = three2worldMatGen();
@@ -22,6 +23,7 @@ export default function registerAframeComponents(options) {
     Euler_order,
     props,
     onXRFrameMQTT,
+    workerLastData,
     endLinkPose,
   } = options;
   
@@ -66,10 +68,10 @@ export default function registerAframeComponents(options) {
 	if (!pose.equals(this.lastPose)) {
           set_controller_object(this.el.object3D);
 	  //
-	  // **** debugging output ****
-	  const position = new THREE.Vector3();
-	  position.setFromMatrixPosition(this.el.object3D.matrixWorld);
-	  position.applyMatrix4(three2worldMat); // convert to world coordinates
+	  // // **** debugging output ****
+	  // const position = new THREE.Vector3();
+	  // position.setFromMatrixPosition(this.el.object3D.matrixWorld);
+	  // position.applyMatrix4(three2worldMat); // convert to world coord.
 	  // console.log("controller position: " + position.x.toFixed(3)
 	  // 	      + ", " + position.y.toFixed(3)
 	  // 	      + ", " + position.z.toFixed(3));
@@ -149,6 +151,15 @@ export default function registerAframeComponents(options) {
         vrModeRef.current = false;
         console.log('exit-vr');
       });
+    },
+    tick: function () {
+      if (workerLastData) {
+	debugBuffer.push(workerLastData.current);
+      }
+      if (debugBuffer.length >= 10) {
+	console.log("debugBuffer: " + debugBuffer.join(", "));
+	debugBuffer.length = 0; // clear the buffer
+      }
     }
   });
   // ****************

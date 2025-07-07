@@ -32,10 +32,13 @@ const MQTT_DEVICE_TOPIC = "dev/" + idtopic;
 const MQTT_CTRL_TOPIC = "vr/"; 
 const MQTT_ROBOT_STATE_TOPIC = "robot/";
 
-export default function DynamicHome(props) {
-  const three2worldMat = three2worldMatGen();
-  const world2threeMat = world2threeMatGen();
+// Generate constant transformation matrices (THREE.Matrix4)
+const three2worldMat = three2worldMatGen();
+const world2threeMat = world2threeMatGen();
+console.log("three2worldMat: ", three2worldMat.elements);
+console.log("world2threeMat: ", world2threeMat.elements);
 
+export default function DynamicHome(props) {
   const [now, setNow] = React.useState(new Date())
   const [rendered,set_rendered] = React.useState(false)
   const robotNameList = ["Model"]
@@ -77,13 +80,34 @@ export default function DynamicHome(props) {
   const endLinkPoseStart = React.useRef(new THREE.Matrix4());
   const controllerStartInv = React.useRef(new THREE.Matrix4());
   // Animation loop
-  const loop = ()=>{
+  const loop = (timestamp)=>{
     reqIdRef.current = window.requestAnimationFrame(loop) 
   }
   React.useEffect(() => {
     loop()
     return () => window.cancelAnimationFrame(reqIdRef.current) 
   },[])
+  // Worker thread generation
+  const workerRef = React.useRef(null);
+  const workerLastData = React.useRef(null);
+  React.useEffect(() => {
+    if (workerRef.current === null) {
+      console.log("******** Creating new worker ********");
+      workerRef.current = new Worker('/worker.js');
+      console.log("workerRef.current: ", workerRef.current);
+      workerRef.current.onmessage = (event) => {
+	// console.log("Worker message received:", event.data);
+	// Always skip to the latest data
+	workerLastData.current = event.data;
+      };
+    }
+    return () => {
+      if (workerRef.current) {
+	workerRef.current.terminate();
+	workerRef.current = null;
+      }
+    };
+  }, []);
 
   // Change Robot
   const robotChange = ()=>{
@@ -329,6 +353,7 @@ export default function DynamicHome(props) {
       Euler_order,
       props,
       onXRFrameMQTT,
+      workerLastData,
       endLinkPose,
     });
   }, []);
