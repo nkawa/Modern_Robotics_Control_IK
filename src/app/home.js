@@ -1,5 +1,6 @@
 "use client";
 import 'aframe'
+const THREE = window.AFRAME.THREE;
 import * as React from 'react'
 import RobotScene from './RobotScene';
 import registerAframeComponents from './registerAframeComponents'; 
@@ -7,7 +8,6 @@ import useMqtt from './useMqtt';
 import { mqttclient,idtopic, publishMQTT, codeType } from '../lib/MetaworkMQTT'
 import { three2worldMatGen, world2threeMatGen } from './constTransformGen';
 
-const THREE = window.AFRAME.THREE;
 const mr = require('../modern_robotics/modern_robotics_core.js');
 // const RobotKinematics = require('../modern_robotics/modern_robotics_Kinematics.js');
 const RobotDynamcis = require('../modern_robotics/modern_robotics_Dynamics.js');
@@ -93,7 +93,7 @@ export default function DynamicHome(props) {
   React.useEffect(() => {
     if (workerRef.current === null) {
       console.log("******** Creating new worker ********");
-      workerRef.current = new Worker('/worker.js');
+      workerRef.current = new Worker('/worker.js', { type: 'module'});
       console.log("workerRef.current: ", workerRef.current);
       workerRef.current.onmessage = (event) => {
 	// console.log("Worker message received:", event.data);
@@ -198,7 +198,7 @@ export default function DynamicHome(props) {
 
   React.useEffect(() => {
     // VR input period
-    const dt = 16.5/1000;
+    // const dt = 16.5/1000;
     if (rendered && vrModeRef.current && trigger_on ) {
       // w_S^{-1}: start^-1: controllerStartInv.current
       // w_G: goal: controllerCurrentWorld
@@ -235,7 +235,7 @@ export default function DynamicHome(props) {
       const newEndLinkPose = endLinkPoseStart.current.clone()
 	    .multiply(startTbegin).multiply(matrixDiff)
 	    .multiply(beginTstart);
-      //
+
       // **** for debug printing purpose ****
       // const newPosition = new THREE.Vector3();
       // const newRotation = new THREE.Quaternion();
@@ -258,6 +258,8 @@ export default function DynamicHome(props) {
       // // console.log('newEuler1: ', newEuler1);
 
       
+      // **** send to worker thread ****
+      workerRef.current.postMessage(newEndLinkPose.elements);
       // KinamaticsControl(newPos, newEuler);
       KinematicsControl(newEndLinkPose);
       

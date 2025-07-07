@@ -6,6 +6,7 @@
     "dev": "next dev",
     "dev-https": "next dev --experimental-https",
     "build": "next build",
+    "build:worker": "vite build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -19,5 +20,8 @@
     "react-dom": "^19.1.0",
     "three": "^0.177.0",
     "ts-morph": "^26.0.0"
+  },
+  "devDependencies": {
+    "vite": "^7.0.2"
   }
 }

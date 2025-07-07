@@ -157,6 +157,7 @@ export default function registerAframeComponents(options) {
 	debugBuffer.push(workerLastData.current);
       }
       if (debugBuffer.length >= 10) {
+	debugBuffer.length = 5; // keep the last 5 entries
 	console.log("debugBuffer: " + debugBuffer.join(", "));
 	debugBuffer.length = 0; // clear the buffer
       }
