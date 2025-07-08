@@ -1,0 +1,6 @@
+[submodule "wasm/moveit_jacobian"]
+	path = wasm/moveit_jacobian
+	url = git@github.com:TSUSAKA-ucl/moveit_jacobian.git
+[submodule "wasm/external/eigen"]
+	path = wasm/external/eigen
+	url = https://gitlab.com/libeigen/eigen.git

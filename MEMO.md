@@ -8,16 +8,16 @@
 
 3. 各リンクentityが、どのようにjointモデルに従って動いているか、FK入力調査 →済
 4. [ロボットのURDF](https://wiki.ros.org/urdf/XML/joint)と、
-   [河口研AFrame](https://github.com/nkawa/AgileX-PiPER-Control-IK)の
-   [ジョイント定義(向き・ゼロ)](https://github.com/nkawa/AgileX-PiPER-Control-IK/blob/70faa6fb38acedbc313fd7b65fe1daa3873886dc/src/app/home.js#L1399)で、
-   どのように異なっているか調査  
+   [~~河口研オリジナル~~劉さんAFrame](https://github.com/vettayruu/Modern_Robotics_Control_IK/blob/Piper_MQTT_Control/src/app/Model.js)の
+   [ジョイント定義(向き・ゼロ)](https://github.com/vettayruu/Modern_Robotics_Control_IK/blob/3115ce53630e62fe32eaef36b03f5553dd3f8b62/src/app/Model.js#L32)で、
+   どのように異なっているか調査 →済  
    WASMのSLRM moduleはフルSRDF/URDFは不要で最低限jointの`type`, `origin`, `axis`
    だけあればよい。ただし`worker.js`としてはジョイント角を積分した後に
    ジョイントリミット内に収めるために`limit`も有ったほうが良い(ほぼ必要)
 5. 河口研ジョイント角とURDFジョイント角の相互変換(向き・ゼロ)作成。SLRMモジュールの
    出力をaframeに反映させるため。
 
-6. workerのIKをModern RoboticsからWASM(slrm)に置きかえ。
+6. workerのIKをModern RoboticsからWASM(slrm)に置きかえ。Aボタン
    1. `worker.js`でロボットタイプ、初期関節角等の初期化をメッセージで行うようにする  
       * ロボットタイプ(URDF)のセット、URDF(json)のfetch、WASMの計算オブジェクト生成  
       * 初期ジョイント角の(worker.js内)のセット
@@ -51,3 +51,34 @@
    ```
    workerRef.current = new Worker('/worker.js', { type: 'module'});
    ```
+
+## Agile-X提供のpiperのURDF
+
+1. axisはすべて[0,0,1]
+2. origin.rpy rpyは(X,Y,Z)の順
+   1. 0,0,0
+   2. Pi/2, 0, -Pi <= axisが0,0,1なのでゼロ点を変えている
+   3. 0, 0, -100degree <=同上
+   4. Pi/2, 0, 0
+   5. -Pi/2, 0, 0
+   6. Pi/2, 0, 0
+
+PiPER xacro まとめ
+URDFでは、先xyz、次rpyの順に変換。rpyは rotz.roty.rotxの順に変換
+
+ name   ,  type     , xyz                    ,rpy
+"joint1", "revolute", "0 0 0.123",            "0 0 0"
+"joint2", "revolute", "0 0 0",                "1.5708 -0.10095 -3.1416"
+"joint3", "revolute", "0.28503 0 0",          "0 0 -1.759"
+"joint4", "revolute", "-0.021984 -0.25075 0", "1.5708 0 0"
+"joint5", "revolute", "0 0 0",                "-1.5708 0 0"
+"joint6", "revolute", "0 -0.091 0",           "1.5708 0 0"
+
+-0.10095radは、joint2がゼロの時link2の先をすこし持ち上げる
+-1.759rad ≒ -100°は、join3がゼロの時完全に畳まれずlink4を10°持ち上げる
+ArcTan[0.25075,0.021984]/Pi*180 ≒ 5.01048°
+
+ROS2のrvizでのPiPERの初期位置は {0.2, 1.5, -1.0, -0.1, -0.4, 1.5}
+すなわち {11.5, 85.9, -57.3, -5.7, -22.9, 85.9}°
+
+河口研(劉さん)のゼロ点は、joint1の直上にjoint3,4,5,6 各jointの回転の向きは同じ
