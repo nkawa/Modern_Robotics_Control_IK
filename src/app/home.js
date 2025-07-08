@@ -127,7 +127,7 @@ export default function DynamicHome(props) {
   // // // const theta_body_initial = [0, -0.27473, 1.44144, 0, 1.22586, 0];
   // // const theta_body_initial = [0, -30, 45, 0, 30, 0].map(x=>x*Math.PI/180);
   // const theta_body_initial = [0, -30, 30, 0, 30, 0].map(x=>x*Math.PI/180);
-  const theta_body_initial = [0, 0, 0, -60, 0, 55].map(x=>x*Math.PI/180);
+  const theta_body_initial = [0, -15, 82.6, 0, 70, 0].map(x=>x*Math.PI/180);
   const [theta_body, setThetaBody] = React.useState(theta_body_initial);
 
   // const dtheta_body_initial = [0, 0, 0, 0, 0, 0];

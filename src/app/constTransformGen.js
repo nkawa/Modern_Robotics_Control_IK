@@ -3,7 +3,7 @@
 let three2worldCache = null;
 let world2threeCache = null;
 export function three2worldMatGen() {
-  if (three2worldCache) return three2worldCache.clone();
+  // if (three2worldCache) return three2worldCache.clone();
   // // /* const THREE = window.AFRAME.THREE */
   // world座標系からthree.jsの座標系への変換行列. world_T_threeに相当
   // 16個の値の配列(列優先、column-major 順)で Matrix4 を初期化
@@ -18,7 +18,7 @@ export function three2worldMatGen() {
 }
 
 export function world2threeMatGen() {
-  if (world2threeCache) return world2threeCache.clone();
+  // if (world2threeCache) return world2threeCache.clone();
   // /* const THREE = window.AFRAME.THREE */
   // three_T_worldに相当
   world2threeCache = three2worldMatGen().clone().transpose(); // 逆行列
