@@ -27,7 +27,9 @@ set_target_properties(slrm_module PROPERTIES
 
 
 target_link_options(slrm_module PRIVATE
-    "-sMODULARIZE=1"
-     "-sWASM=1"
-    "--bind"
-    )
+  "-sMODULARIZE=1"
+  "-sEXPORT_ES6=1"
+  "-sENVIRONMENT=web,worker"
+  "-sWASM=1"
+  "--bind"
+)

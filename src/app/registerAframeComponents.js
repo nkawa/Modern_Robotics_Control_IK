@@ -1,6 +1,5 @@
 import {three2worldMatGen, world2threeMatGen} from './constTransformGen'
 let registered = false;
-let debugBuffer = [];
 
 export default function registerAframeComponents(options) {
   const three2worldMat = three2worldMatGen();
@@ -23,7 +22,7 @@ export default function registerAframeComponents(options) {
     Euler_order,
     props,
     onXRFrameMQTT,
-    workerLastData,
+    workerLastJoints,
     endLinkPose,
   } = options;
   
@@ -59,6 +58,7 @@ export default function registerAframeComponents(options) {
       this.el.addEventListener('bbuttonup', () => set_button_b_on(false));
 
       this.lastPose = new THREE.Matrix4();
+      this.count = 0;
     },
     tick: function () {
       const obj = this.el.object3D;
@@ -80,6 +80,7 @@ export default function registerAframeComponents(options) {
 	set_controller_object(this.el.object3D);
 	this._my_init_flag = true;
       }
+      ++this.count;
       this.lastPose.copy(pose);
     }
   });
@@ -153,13 +154,11 @@ export default function registerAframeComponents(options) {
       });
     },
     tick: function () {
-      if (workerLastData) {
-	debugBuffer.push(workerLastData.current);
-      }
-      if (debugBuffer.length >= 10) {
-	debugBuffer.length = 5; // keep the last 5 entries
-	console.log("debugBuffer: " + debugBuffer.join(", "));
-	debugBuffer.length = 0; // clear the buffer
+      if (workerLastJoints.current) {
+	console.log('workerLastJoints: '
+		    + workerLastJoints.current[0].toFixed(3) + ', '
+		    + workerLastJoints.current[1].toFixed(3) + ', '
+		    + workerLastJoints.current[2].toFixed(3));
       }
     }
   });

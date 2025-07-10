@@ -81,4 +81,32 @@ ArcTan[0.25075,0.021984]/Pi*180 ≒ 5.01048°
 ROS2のrvizでのPiPERの初期位置は {0.2, 1.5, -1.0, -0.1, -0.4, 1.5}
 すなわち {11.5, 85.9, -57.3, -5.7, -22.9, 85.9}°
 
-河口研(劉さん)のゼロ点は、joint1の直上にjoint3,4,5,6 各jointの回転の向きは同じ
+劉さんModernRoboticsのゼロ点は、joint1の直上にjoint3,4,5,6 各jointの回転の向きは同じ
+
+mrLiuをurdfに変換
+1. j1u = j1mr
+2. j2u = j2mr + Pi/2 - 0.10095
+3. j3u = j3mr - (Pi/2 - 0.10095) - Pi/2 + ArcTan[0.25075,0.021984]
+4. j4u = j4mr
+5. j5u = j5mr
+6. j6u = j6mr
+
+## workerとのコミュニケーション
+
+### オブジェクトの`type`キー毎の動作
+
+* robotType: 引数: URDF jsonのパス  
+  jsonをfetchし、WASMでjoint modelを作り、WASMのCmdVelGeneratorを作る  
+  リターン: エラータイプ
+* init: 引数: currentJointPosition  
+  IK用の関節角初期値(現在の関節角)をworker内にセットする。
+* destination: 引数: 目標位置姿勢
+  関節角が存在していれば、workerを周期計算モードに入れる。
+
+###  workerの周期計算モード
+関節角が存在していれば、
+  WASMのcalc_velocityを呼んでintervalを掛けて関節角を更新する。
+  jsonの関節角リミットと比較し、範囲外ならばクロッピングする。
+  statusと関節角を返す。必要に応じて result.otherにworkerのstatusを付ける。
+  メインスレッドに向けてpostMessageする
+  

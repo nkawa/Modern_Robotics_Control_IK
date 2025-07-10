@@ -54,7 +54,7 @@ export default function DynamicHome(props) {
   const [controller_object, set_controller_object] = React.useState(() => {
     const controller_object = new THREE.Object3D();
     return controller_object;
-    });
+  });
 
   const [selectedMode, setSelectedMode] = React.useState('control'); 
   const robotIDRef = React.useRef(idtopic); 
@@ -89,16 +89,34 @@ export default function DynamicHome(props) {
   },[])
   // Worker thread generation
   const workerRef = React.useRef(null);
-  const workerLastData = React.useRef(null);
+  const workerLastJoints = React.useRef(null);
+  // const useWorkerRef = React.useRef(true); // Flag to indicate if the worker is ready
   React.useEffect(() => {
     if (workerRef.current === null) {
       console.log("******** Creating new worker ********");
       workerRef.current = new Worker('/worker.js', { type: 'module'});
       console.log("workerRef.current: ", workerRef.current);
       workerRef.current.onmessage = (event) => {
-	// console.log("Worker message received:", event.data);
-	// Always skip to the latest data
-	workerLastData.current = event.data;
+	switch (event.data.type) {
+	case 'ready':
+	  workerRef.current
+	    .postMessage({ type: 'init', filename: robot_model
+			   +'/'+'urdf.json' //robot_model,
+			 });
+	  break;
+	case 'generator_ready':
+	  workerRef.current
+	    .postMessage({ type: 'set_initial_joints',
+			   joints: theta_body});
+	  break;
+	case 'joints':
+	  if (event.data.joints) {
+	    // console.log("Worker message received:", event.data);
+	    // Always skip to the latest data
+	    workerLastJoints.current = event.data.joints;
+	  }
+	  break;
+	}
       };
     }
     return () => {
@@ -125,14 +143,13 @@ export default function DynamicHome(props) {
   // Initial joint and tool angles
   // // // // const theta_body_initial = mr.deg2rad([0, -30, 70, 0, 65, 0]);
   // // // const theta_body_initial = [0, -0.27473, 1.44144, 0, 1.22586, 0];
-  // // const theta_body_initial = [0, -30, 45, 0, 30, 0].map(x=>x*Math.PI/180);
+  // const theta_body_initial = [0, 0, 0, 0, 0, 0].map(x=>x*Math.PI/180);
   // const theta_body_initial = [0, -30, 30, 0, 30, 0].map(x=>x*Math.PI/180);
   const theta_body_initial = [0, -15, 82.6, 0, 70, 0].map(x=>x*Math.PI/180);
   const [theta_body, setThetaBody] = React.useState(theta_body_initial);
-
   // const dtheta_body_initial = [0, 0, 0, 0, 0, 0];
   // const [dtheta_body, setdThetaBody] = React.useState(dtheta_body_initial);
-
+  
   const theta_tool_inital = 0;
   const [theta_tool, setThetaTool] = React.useState(theta_tool_inital);
   // Theta guess for Newton's method in inverse kinematics
@@ -202,6 +219,11 @@ export default function DynamicHome(props) {
   React.useEffect(() => {
     // VR input period
     // const dt = 16.5/1000;
+    // if (rendered && vrModeRef.current && workerRef.current) {
+    //   if (workerLastJoints.current === null
+    // 	  || workerLastJoints.current.other.hasJointValue === false) {
+    //   }
+    // }
     if (rendered && vrModeRef.current && trigger_on ) {
       // w_S^{-1}: start^-1: controllerStartInv.current
       // w_G: goal: controllerCurrentWorld
@@ -262,7 +284,8 @@ export default function DynamicHome(props) {
 
       
       // **** send to worker thread ****
-      workerRef.current.postMessage(newEndLinkPose.elements);
+      workerRef.current.postMessage({ type: 'destination',
+				      endLinkPose: newEndLinkPose.elements });
       // KinamaticsControl(newPos, newEuler);
       KinematicsControl(newEndLinkPose);
       
@@ -284,9 +307,10 @@ export default function DynamicHome(props) {
     controller_object.position.x,
     controller_object.position.y,
     controller_object.position.z,
-    controller_object.rotation.x,
-    controller_object.rotation.y,
-    controller_object.rotation.z,
+    controller_object.quaternion.x,
+    controller_object.quaternion.y,
+    controller_object.quaternion.z,
+    controller_object.quaternion.w,
     rendered,
     trigger_on,
   ]);
@@ -358,7 +382,7 @@ export default function DynamicHome(props) {
       Euler_order,
       props,
       onXRFrameMQTT,
-      workerLastData,
+      workerLastJoints,
       endLinkPose,
     });
   }, []);

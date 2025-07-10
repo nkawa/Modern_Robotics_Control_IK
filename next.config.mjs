@@ -1,6 +1,10 @@
-/** @type {import('next').NextConfig} */
+// next.config.mjs
+
 const nextConfig = {
-    trailingSlash: true,
+  trailingSlash: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;
