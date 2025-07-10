@@ -88,7 +88,8 @@ self.onmessage = function(event) {
 	  return jointModel;
 	});
 	const jointModelVector = makeJointModelVector(jointModels);
-	console.log('type of SlrmModule.CmdVelGen: ' + typeof SlrmModule.CmdVelGen);
+	console.log('type of SlrmModule.CmdVelGen: '
+		    + typeof SlrmModule.CmdVelGenerator);
 	cmdVelGen = new SlrmModule.CmdVelGenerator(jointModelVector);
 	jointModels.forEach(model => model.delete());
 	if (cmdVelGen === null || cmdVelGen === undefined) {
@@ -109,16 +110,17 @@ self.onmessage = function(event) {
   } break;
   case 'set_initial_joints': if (workerState === st.generatorReady ||
 				 workerState === st.slrmReady) {
-    if (!data.joints) {
+    if (data.joints) {
       // 初期ジョイントの設定処理
       console.log('Setting initial joints:', data.joints);
       joints = [...data.joints];
       // 到着処理、prevPosition未定義
       workerState = st.slrmReady;
+      console.log('Worker state changed to slrmReady');
     }
   } break;
   case 'destination': if (workerState === st.slrmReady &&
-			  !data.endLinkPose ) {
+			  data.endLinkPose ) {
     // データの受信処理
     controllerTfVec = [...data.endLinkPose];
     console.log('Received destination: '

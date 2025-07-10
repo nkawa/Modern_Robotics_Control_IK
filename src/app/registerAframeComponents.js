@@ -155,10 +155,10 @@ export default function registerAframeComponents(options) {
     },
     tick: function () {
       if (workerLastJoints.current) {
-	console.log('workerLastJoints: '
-		    + workerLastJoints.current[0].toFixed(3) + ', '
-		    + workerLastJoints.current[1].toFixed(3) + ', '
-		    + workerLastJoints.current[2].toFixed(3));
+	// console.log('workerLastJoints: '
+	// 	    + workerLastJoints.current[0].toFixed(3) + ', '
+	// 	    + workerLastJoints.current[1].toFixed(3) + ', '
+	// 	    + workerLastJoints.current[2].toFixed(3));
       }
     }
   });
