@@ -1,9 +1,9 @@
-import {three2worldMatGen, world2threeMatGen} from './constTransformGen'
+// import {three2worldMatGen, world2threeMatGen} from './constTransformGen'
 let registered = false;
 
 export default function registerAframeComponents(options) {
-  const three2worldMat = three2worldMatGen();
-  const world2threeMat = world2threeMatGen();
+  // const three2worldMat = three2worldMatGen();
+  // const world2threeMat = world2threeMatGen();
   if (registered) return;
   registered = true;
 
@@ -176,6 +176,14 @@ export default function registerAframeComponents(options) {
       if (!obj.matrixWorld) return; // not yet initialized
 
       const pose = obj.matrixWorld;
+      // console.log('end-link pose x-axis: '+
+      // 		  pose.elements[0].toFixed(3) + ', ' +
+      // 		  pose.elements[1].toFixed(3) + ', ' +
+      // 		  pose.elements[2].toFixed(3) +
+      // 		  ', y-axis: ' +
+      // 		  pose.elements[4].toFixed(3) + ', ' +
+      // 		  pose.elements[5].toFixed(3) + ', ' +
+      // 		  pose.elements[6].toFixed(3) );
       if (this._my_init_flag) {
 	if (!pose.equals(this.lastPose)) {
 	  // console.log('end-link Moved !!');

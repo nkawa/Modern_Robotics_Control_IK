@@ -6,25 +6,15 @@ import RobotScene from './RobotScene';
 import registerAframeComponents from './registerAframeComponents'; 
 import useMqtt from './useMqtt';
 import { mqttclient,idtopic, publishMQTT, codeType } from '../lib/MetaworkMQTT'
-import { three2worldMatGen, world2threeMatGen } from './constTransformGen';
+import { three2worldMatGen, world2threeMatGen,
+	   mr2urdfJoints, urdf2mrJoints
+       } from './constTransformGen';
 
 const mr = require('../modern_robotics/modern_robotics_core.js');
 // const RobotKinematics = require('../modern_robotics/modern_robotics_Kinematics.js');
 const RobotDynamcis = require('../modern_robotics/modern_robotics_Dynamics.js');
+const Euler_order = 'ZYX'; // Euler angle order
 
-// Load Robot Model
-const robot_model = "agilex_piper"; // Change this to your robot model
-const rk = new RobotDynamcis(robot_model);
-const M = rk.get_M();
-const Mlist = rk.get_Mlist();
-const Glist = rk.get_Glist();
-const Slist = rk.get_Slist();
-const Kplist = rk.get_Kplist(); 
-const Kilist = rk.get_Kilist(); 
-const Kdlist = rk.get_Kdlist(); 
-const jointLimits = rk.jointLimits;
-const toolLimit = rk.toolLimit;
-const Blist = mr.SlistToBlist(M, Slist); // Convert Slist to Blist
 
 // MQTT Topics
 const MQTT_REQUEST_TOPIC = "mgr/request";
@@ -32,13 +22,30 @@ const MQTT_DEVICE_TOPIC = "dev/" + idtopic;
 const MQTT_CTRL_TOPIC = "vr/"; 
 const MQTT_ROBOT_STATE_TOPIC = "robot/";
 
-// Generate constant transformation matrices (THREE.Matrix4)
-const three2worldMat = three2worldMatGen();
-const world2threeMat = world2threeMatGen();
-console.log("three2worldMat: ", three2worldMat.elements);
-console.log("world2threeMat: ", world2threeMat.elements);
-
 export default function DynamicHome(props) {
+  // State variables
+  // Generate constant transformation matrices (THREE.Matrix4)
+  const [three2worldMat] = React.useState(()=> three2worldMatGen());
+  const [world2threeMat] = React.useState(()=> world2threeMatGen());
+  // console.log("three2worldMat: ", three2worldMat.elements);
+  // console.log("world2threeMat: ", world2threeMat.elements);
+
+  // initilize Modern Robotics parameters
+  // Load Robot Model
+  const [robot_model] = React.useState("agilex_piper"); // Change this to your robot model
+  const [rk] = React.useState(()=> new RobotDynamcis(robot_model));
+  const [jointLimits] = React.useState(rk.jointLimits);
+  const [toolLimit] = React.useState(rk.toolLimit);
+  const [M] = React.useState(rk.get_M());
+  const [Blist] = React.useState(()=>{
+    // const Mlist = rk.get_Mlist();
+    // const Glist = rk.get_Glist();
+    // const Kplist = rk.get_Kplist(); 
+    // const Kilist = rk.get_Kilist(); 
+    // const Kdlist = rk.get_Kdlist(); 
+    const Slist = rk.get_Slist();
+    return mr.SlistToBlist(M, Slist);}); // Convert Slist to Blist
+
   const [now, setNow] = React.useState(new Date())
   const [rendered,set_rendered] = React.useState(false)
   const robotNameList = ["Model"]
@@ -107,7 +114,7 @@ export default function DynamicHome(props) {
 	case 'generator_ready':
 	  workerRef.current
 	    .postMessage({ type: 'set_initial_joints',
-			   joints: theta_body});
+			   joints: mr2urdfJoints(theta_body)});
 	  break;
 	case 'joints':
 	  if (event.data.joints) {
@@ -140,35 +147,47 @@ export default function DynamicHome(props) {
   }
 
   /*** Robot Controller ***/
-  // Initial joint and tool angles
-  // // // // const theta_body_initial = mr.deg2rad([0, -30, 70, 0, 65, 0]);
-  // // // const theta_body_initial = [0, -0.27473, 1.44144, 0, 1.22586, 0];
-  // const theta_body_initial = [0, 0, 0, 0, 0, 0].map(x=>x*Math.PI/180);
-  // const theta_body_initial = [0, -30, 30, 0, 30, 0].map(x=>x*Math.PI/180);
-  const theta_body_initial = [0, -15, 82.6, 0, 70, 0].map(x=>x*Math.PI/180);
-  const [theta_body, setThetaBody] = React.useState(theta_body_initial);
-  // const dtheta_body_initial = [0, 0, 0, 0, 0, 0];
-  // const [dtheta_body, setdThetaBody] = React.useState(dtheta_body_initial);
-  
-  const theta_tool_inital = 0;
-  const [theta_tool, setThetaTool] = React.useState(theta_tool_inital);
+  const [theta_body, setThetaBody] = React.useState(()=>{
+    // Initial joint and tool angles
+    // // // // const theta_body_initial = mr.deg2rad([0, -30, 70, 0, 65, 0]);
+    // // // const theta_body_initial = [0, -0.27473, 1.44144, 0, 1.22586, 0];
+    // const theta_body_initial = [0, 0, 0, 0, 0, 0].map(x=>x*Math.PI/180);
+    // const theta_body_initial = [0, -30, 30, 0, 30, 0].map(x=>x*Math.PI/180);
+    const theta_body_initial = [0, -15, 82.6, 0, 70, 0].map(x=>x*Math.PI/180);
+    // const dtheta_body_initial = [0, 0, 0, 0, 0, 0];
+    // const [dtheta_body, setdThetaBody] = React.useState(dtheta_body_initial);
+    return theta_body_initial});
+  const [theta_tool, setThetaTool] = React.useState(()=>{
+    const theta_tool_inital = 0;
+    return theta_tool_inital});
+
   // Theta guess for Newton's method in inverse kinematics
   const [theta_body_guess, setThetaBodyGuess] = React.useState(theta_body);
 
 
-  // Foward Kinematics solution
-  const T0 = mr.FKinBody(M, Blist, theta_body);
-  const [R0, p0] = mr.TransToRp(T0);
-  const Euler_order = 'ZYX'; // Euler angle order
-
-  // Position and orientation (euler angle) of end effector
-  const position_ee_initial = p0
-  const [position_ee, setPositionEE] = React.useState(position_ee_initial);
-  const position_ee_Three = mr.worlr2three(position_ee);
-
-  const euler_ee_initial = mr.RotMatToEuler(R0, Euler_order); 
-  const [euler_ee, setEuler] = React.useState(euler_ee_initial);
-  const euler_ee_Three = mr.worlr2three(euler_ee);
+  const [pose_ee, setPoseEE] = React.useState(() => {
+    // Foward Kinematics solution
+    const T0 = mr.FKinBody(M, Blist, theta_body);
+    const [R0, p0] = mr.TransToRp(T0);
+    // Position and orientation (rotation matrix) of end effector
+    const pose_ee_initial = {
+      position: p0,
+      // orientation: R0
+      euler: mr.RotMatToEuler(R0, Euler_order)
+    };
+    return pose_ee_initial;});
+  const [pose_ee_Three, setPoseEEThree] = React.useState(() => {
+    const pose_ee_Three_initial = {
+      position: mr.worlr2three(pose_ee.position),
+      euler: mr.worlr2three(pose_ee.euler),
+    };
+    return pose_ee_Three_initial;});
+  React.useEffect(() => {
+    setPoseEEThree({
+      position: mr.worlr2three(pose_ee.position),
+      euler: mr.worlr2three(pose_ee.euler),
+    });
+  }, [...pose_ee.position, ...(pose_ee.euler.flat())]);
 
   // const quaternion_ee_initial = mr.RotMatToQuaternion(R0);
   // const [quaternion_ee, setQuaternionEE] = React.useState(quaternion_ee_initial);
@@ -177,9 +196,9 @@ export default function DynamicHome(props) {
   React.useEffect(() => {
     const T = mr.FKinBody(M, Blist, theta_body);
     const [R, p] = mr.TransToRp(T);
-    setPositionEE(p);
-    setEuler(mr.RotMatToEuler(R, Euler_order)); // Update to ZYX Euler angles
-    }, [theta_body]);
+    const euler = mr.RotMatToEuler(R, Euler_order);
+    setPoseEE({position: p, euler: euler}); // Update to ZYX Euler angles
+    }, [...theta_body]);
   
   /**
    *  Control Methods
@@ -206,6 +225,10 @@ export default function DynamicHome(props) {
       const thetalist_sol_limited = thetalist_sol.map((theta, i) =>
       Math.max(jointLimits[i].min, Math.min(jointLimits[i].max, theta))
       );
+      // const theta_tmp = theta_body.map(x => x); // copy theta_body
+      // theta_tmp[4] = theta_tmp[4] + 3.14159/180; // add 0.1 degree to theta_5
+      // theta_tmp[0] = theta_tmp[0] + 3.14159/180; // add 0.1 degree to theta_5
+      // setThetaBody(theta_tmp);
       setThetaBody(thetalist_sol_limited);
       setThetaBodyGuess(thetalist_sol_limited);
       set_target_error(false);
@@ -225,15 +248,16 @@ export default function DynamicHome(props) {
     //   }
     // }
     if (rendered && vrModeRef.current && trigger_on ) {
-      // w_S^{-1}: start^-1: controllerStartInv.current
-      // w_G: goal: controllerCurrentWorld
-      // w_B: begin: endLinkPoseStart.current
-      // w_E: end: to be calculated
+      // w_B^{-1}: start^-1: controllerStartInv.current
+      // w_E: goal: controllerCurrentWorld
+      // w_S: begin: endLinkPoseStart.current
+      // w_S': 原点はB, 向きはS
+      // w_G: end: to be calculated
       const controllerCurrentWorld = three2worldMat.clone().multiply(controller_object.matrixWorld);
       const controllerDiff = controllerStartInv.current.clone().multiply(controllerCurrentWorld);
-      const startTbegin = controllerStartInv.current.clone().multiply(endLinkPoseStart.current);
-      startTbegin.extractRotation(startTbegin);
-      const beginTstart = startTbegin.clone().transpose();
+      const controllerTend = controllerStartInv.current.clone().multiply(endLinkPoseStart.current);
+      controllerTend.extractRotation(controllerTend);
+      const endTcontroller = controllerTend.clone().transpose();
       //
       // reduce controller movement by 0.25 -- 1.00
       const magnification = 0.60;
@@ -256,52 +280,27 @@ export default function DynamicHome(props) {
       const scale1 = new THREE.Vector3(1, 1, 1);
       const matrixDiff = new THREE.Matrix4();
       matrixDiff.compose(quaterPosDiff, quaterQuatDiff, scale1);
-      //
       const newEndLinkPose = endLinkPoseStart.current.clone()
-	    .multiply(startTbegin).multiply(matrixDiff)
-	    .multiply(beginTstart);
+	    .multiply(endTcontroller).multiply(matrixDiff)
+	    .multiply(controllerTend);
 
-      // **** for debug printing purpose ****
-      // const newPosition = new THREE.Vector3();
-      // const newRotation = new THREE.Quaternion();
-      // newEndLinkPose.decompose(newPosition, newRotation, scale);
-      // // console.log('quaternion START: ', rotation);
-      // const newEuler1 = new THREE.Euler().setFromQuaternion(newRotation,
-      // 							    Euler_order);
-
-      // const startPosition = new THREE.Vector3();
-      // const startRotation = new THREE.Quaternion();
-      // endLinkPoseStart.current.decompose(startPosition, startRotation, scale);
-      // // // console.log('endLinkPoseStart: ', endLinkPoseStart.current.elements);
-      // // console.log('currentPos: ', currentPos);
-      // // console.log('startPosition: ', startPosition);
-      // // console.log('newPos: ', newPos);
-      // // console.log('newPosition: ', newPosition);
-      // // // console.log('euler_ee: ', euler_ee);
-      // // // console.log('currentEuler: ', currentEuler);
-      // // console.log('newEuler: ', newEuler);
-      // // console.log('newEuler1: ', newEuler1);
-
-      
       // **** send to worker thread ****
       workerRef.current.postMessage({ type: 'destination',
 				      endLinkPose: newEndLinkPose.elements });
       // KinamaticsControl(newPos, newEuler);
       KinematicsControl(newEndLinkPose);
-      
     }
     // Update last position and orientation
+    // ** move to theta_body's useEffect **
     if (!trigger_on ||
 	endLinkPoseStart.current.equals(new THREE.Matrix4().identity())) {
       endLinkPoseStart.current = three2worldMat.clone()
 	.multiply(endLinkPose.current);
-      // console.log('set endLinkPoseStart '+ endLinkPoseStart.current.elements);
     }
     if (!trigger_on ||
 	controllerStartInv.current.equals(new THREE.Matrix4().identity())) {
       controllerStartInv.current = three2worldMat.clone()
 	.multiply(controller_object.matrixWorld).invert();
-      // console.log('set controllerStartInv ' + controllerStartInv.current.elements);
     }
   }, [
     controller_object.position.x,
@@ -346,8 +345,7 @@ export default function DynamicHome(props) {
     selectedMode, setSelectedMode,
     theta_body, setThetaBody,
     theta_tool, setThetaTool,
-    position_ee, setPositionEE,
-    euler_ee, setEuler,
+    pose_ee, setPoseEE,
     onTargetChange: KinamaticsControl,
     // onTargetChange: DynamicsControl
   }), [
@@ -359,8 +357,7 @@ export default function DynamicHome(props) {
     selectedMode, setSelectedMode,
     theta_body, setThetaBody,
     theta_tool, setThetaTool,
-    position_ee, setPositionEE,
-    euler_ee, setEuler,
+    pose_ee, setPoseEE,
     KinamaticsControl,
     // DynamicsControl
   ]);
@@ -473,8 +470,8 @@ export default function DynamicHome(props) {
       c_deg_z={c_deg_z}
       viewer={props.viewer}
       monitor={props.monitor}
-      position_ee={position_ee_Three}
-      euler_ee={euler_ee_Three}
+      position_ee={pose_ee_Three.position}
+      euler_ee={pose_ee_Three.euler}
       // vr_controller_pos={vr_controller_pos}
       // vr_controller_euler={vr_controller_euler}
     />

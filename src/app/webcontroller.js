@@ -8,8 +8,11 @@ const {c_deg_x, c_deg_y, c_deg_z} = props
 const {vr_mode} = props
 const {theta_body} = props
 const {theta_tool} = props
-const {position_ee} = props
-const {euler_ee} = props
+  const {pose_ee} = props
+// const {position_ee} = props
+// const {euler_ee} = props
+  const position_ee = pose_ee.position;
+  const euler_ee = pose_ee.euler;
 
 const set_c_pos_x = (e)=>{
   let value = Number.parseFloat(e.target.value || 0)

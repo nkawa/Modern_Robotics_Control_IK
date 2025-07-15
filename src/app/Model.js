@@ -42,7 +42,7 @@ const Model = (props) => {
                     {/* Tool */}
                       <a-entity gltf-model="#j6_1" position={`${finger_pos} 0 ${L_56+L_ee}`}></a-entity>
                       <a-entity gltf-model="#j6_2" position={`${-finger_pos} 0 ${L_56+L_ee}`}></a-entity>
-                      <a-entity end-link position={`0 0 ${L_56+L_ee}`} rotation={`0 0 0`}></a-entity>
+                      <a-entity end-link position={`0 0 ${L_56+L_ee}`} rotation={`0 0 -90`}></a-entity>
                   </a-entity>
                 </a-entity>
               </a-entity>
