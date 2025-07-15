@@ -148,16 +148,20 @@ self.setInterval( () => {
       // console.warn('controllerTfVec or cmdVelGen is not ready yet.');
       return;
     }
+    // console.log('joints: ' + joints.map(v => v.toFixed(3)).join(', ') + '\n' +
+    // 		'controllerTfVec: ' + controllerTfVec.map(v => v.toFixed(3)).join(', '));
     const jointVec = makeDoubleVectorG(joints);
     const endLinkPose = makeDoubleVectorG(controllerTfVec);
     const result = cmdVelGen.calcVelocityMat(jointVec, endLinkPose);
     jointVec.delete();
     endLinkPose.delete();
-    joints = joints.map((val, idx) => val + result.joint_velocities.get(idx)*0.01);
+    let velocities = new Float64Array(result.joint_velocities.size());
+    velocities = velocities.map((_, idx) => result.joint_velocities.get(idx));
+    result.joint_velocities.delete();
+    // console.log('status: ', result.status.value);
+    joints = joints.map((val, idx) => val + velocities[idx]*0.01);
     // if (newDestinationFlag) {
     if (result.status.value === 0 && counter < 20000) {
-      let velocities = new Float64Array(result.joint_velocities.size());
-      velocities = velocities.map((_, idx) => result.joint_velocities.get(idx));
       // console.log('velocity: '+velocities.map(v => v.toFixed(3)).join(', '));
       // console.log('joints: '+ joints.map(v => (v*57.2958).toFixed(1)).join(', '));
       // console.log('destinatoin: '+controllerTfVec.slice(12, 15)

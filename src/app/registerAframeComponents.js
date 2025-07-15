@@ -1,4 +1,4 @@
-// import {three2worldMatGen, world2threeMatGen} from './constTransformGen'
+import {urdf2mrJoints} from './constTransformGen'
 let registered = false;
 
 export default function registerAframeComponents(options) {
@@ -8,7 +8,6 @@ export default function registerAframeComponents(options) {
   registered = true;
 
   const {
-    set_rendered,
     robotChange,
     set_controller_object,
     set_trigger_on,
@@ -23,12 +22,10 @@ export default function registerAframeComponents(options) {
     props,
     onXRFrameMQTT,
     workerLastJoints,
+    setThetaBody,
     endLinkPose,
   } = options;
   
-  // set rendered state after a short delay to ensure the scene is ready
-  setTimeout(() => set_rendered(true), 16.5);
-
   AFRAME.registerComponent('robot-click', {
     init: function () {
       this.el.addEventListener('click', () => {
@@ -155,6 +152,8 @@ export default function registerAframeComponents(options) {
     },
     tick: function () {
       if (workerLastJoints.current) {
+	// console.log('worker joints: ', urdf2mrJoints(workerLastJoints.current).map(v => v.toFixed(3)).join(', '));
+	setThetaBody(urdf2mrJoints(workerLastJoints.current));
 	// console.log('workerLastJoints: '
 	// 	    + workerLastJoints.current[0].toFixed(3) + ', '
 	// 	    + workerLastJoints.current[1].toFixed(3) + ', '

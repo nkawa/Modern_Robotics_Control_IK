@@ -154,8 +154,6 @@ export default function DynamicHome(props) {
     // const theta_body_initial = [0, 0, 0, 0, 0, 0].map(x=>x*Math.PI/180);
     // const theta_body_initial = [0, -30, 30, 0, 30, 0].map(x=>x*Math.PI/180);
     const theta_body_initial = [0, -15, 82.6, 0, 70, 0].map(x=>x*Math.PI/180);
-    // const dtheta_body_initial = [0, 0, 0, 0, 0, 0];
-    // const [dtheta_body, setdThetaBody] = React.useState(dtheta_body_initial);
     return theta_body_initial});
   const [theta_tool, setThetaTool] = React.useState(()=>{
     const theta_tool_inital = 0;
@@ -182,15 +180,6 @@ export default function DynamicHome(props) {
       euler: mr.worlr2three(pose_ee.euler),
     };
     return pose_ee_Three_initial;});
-  React.useEffect(() => {
-    setPoseEEThree({
-      position: mr.worlr2three(pose_ee.position),
-      euler: mr.worlr2three(pose_ee.euler),
-    });
-  }, [...pose_ee.position, ...(pose_ee.euler.flat())]);
-
-  // const quaternion_ee_initial = mr.RotMatToQuaternion(R0);
-  // const [quaternion_ee, setQuaternionEE] = React.useState(quaternion_ee_initial);
 
   // Update end effector position and orientation (for webcontroller)
   React.useEffect(() => {
@@ -198,6 +187,10 @@ export default function DynamicHome(props) {
     const [R, p] = mr.TransToRp(T);
     const euler = mr.RotMatToEuler(R, Euler_order);
     setPoseEE({position: p, euler: euler}); // Update to ZYX Euler angles
+    setPoseEEThree({
+      position: mr.worlr2three(pose_ee.position),
+      euler: mr.worlr2three(pose_ee.euler),
+    });
     }, [...theta_body]);
   
   /**
@@ -288,7 +281,7 @@ export default function DynamicHome(props) {
       workerRef.current.postMessage({ type: 'destination',
 				      endLinkPose: newEndLinkPose.elements });
       // KinamaticsControl(newPos, newEuler);
-      KinematicsControl(newEndLinkPose);
+      // KinematicsControl(newEndLinkPose);
     }
     // Update last position and orientation
     // ** move to theta_body's useEffect **
@@ -365,7 +358,6 @@ export default function DynamicHome(props) {
   // VRController Inputs (Aframe Components)
   React.useEffect(() => {
     registerAframeComponents({
-      set_rendered,
       robotChange,
       set_controller_object,
       set_trigger_on,
@@ -380,8 +372,12 @@ export default function DynamicHome(props) {
       props,
       onXRFrameMQTT,
       workerLastJoints,
+      setThetaBody,
       endLinkPose,
     });
+    // set rendered state after a short delay to ensure the scene is ready
+    // setTimeout(() => set_rendered(true), 16.5);
+    set_rendered(true);
   }, []);
 
   /* 

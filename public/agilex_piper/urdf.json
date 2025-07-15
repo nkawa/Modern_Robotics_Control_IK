@@ -257,14 +257,15 @@
     },
     "origin": {
       "$": {
+	"_comment": "手で修正。Agile-Xのxacroでは、原点位置がwith gripperでもno gripperでもLink6のフランジ面だが、mr.IKinBodyでは 0.1358m 加えたグリッパーの先端になっている。",
         "rpy": [
           1.5708,
           0,
           0
         ],
         "xyz": [
-          0.000088259,
-          -0.091,
+          0,
+          -0.2268,
           0
         ]
       }
