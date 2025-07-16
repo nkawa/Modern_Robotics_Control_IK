@@ -1,5 +1,8 @@
 'use strict';
-const st = Object.freeze({ // worker state definition
+// Worker script for handling messages and performing calculations
+// import * as THREE from 'three' // THREE.jsを使わなければNext.jsやViteでのビルドが不要
+// worker state definition
+const st = Object.freeze({
   initializing: 1,
   waitingRobotType: 2,
   generatorMaking: 3,
@@ -7,8 +10,6 @@ const st = Object.freeze({ // worker state definition
   slrmReady: 5,
 })
 let workerState = st.initializing; // worker state
-// Worker script for handling messages and performing calculations
-// import * as THREE from 'three'
 console.log('Now intended to import ModuleFactory');
 // import ModuleFactory from '/wasm/slrm_module.js';
 const ModuleFactory = await import('/wasm/slrm_module.js');
@@ -24,9 +25,16 @@ if (!SlrmModule) {
   throw new Error('SlrmModule could not be loaded');
 }
 
+// ******** definitions of global variables ********
+const timeInterval = 10; // time step for simulation in milliseconds
+const timeStep = timeInterval / 1000; // time step in seconds
+const logInterval = 1000n/BigInt(timeInterval); // log interval in BigInt
 let controllerTfVec = null; // endLinkPoseの値を受け取るベクトル
-let counter = 0;
+let counter = 0n;
 let joints = null; // joint position vector. size is 6,7 or 8
+let prevJoints = null; // 前回のジョイントポジション
+const jointUpperLimits = [];
+const jointLowerLimits = [];
 let cmdVelGen = null; // コマンド速度生成器WASMオブジェクト
 let makeDoubleVectorG = null; // helper function for DoubleVector
 // let newDestinationFlag = false; // 新しいdestinationが来たかどうか
@@ -104,13 +112,24 @@ self.onmessage = function(event) {
 	if (cmdVelGen !== null && cmdVelGen !== undefined) {
 	  console.log('CmdVelGen instance created:', cmdVelGen);
 	}
+	// joint limitsの設定
+	revolutes.forEach(obj => {
+	  jointUpperLimits.push(obj.limit.$.upper);
+	  jointLowerLimits.push(obj.limit.$.lower);
+	});
+	console.log('jointLimits: ', jointUpperLimits, jointLowerLimits);
+	console.log('Status Definitions: ' +
+		    "OK:" + SlrmModule.CmdVelGeneratorStatus.OK.value + ", " +
+		    "ERROR:" + SlrmModule.CmdVelGeneratorStatus.ERROR.value + ", " +
+		    "END:" + SlrmModule.CmdVelGeneratorStatus.END.value);
+	cmdVelGen.setExactSolution(false); // singularity通過のため
+	// なにかの加減でオブジェクト生成に失敗した場合はここでエラーがthrownされる
 	workerState = st.generatorReady;
 	self.postMessage({type: 'generator_ready'});
       })
       .catch(error => {
 	console.error('Error fetching or parsing JSON file:', error);
       });
-    counter = 0;
   } break;
   case 'set_initial_joints': if (workerState === st.generatorReady ||
 				 workerState === st.slrmReady) {
@@ -159,25 +178,66 @@ self.setInterval( () => {
     velocities = velocities.map((_, idx) => result.joint_velocities.get(idx));
     result.joint_velocities.delete();
     // console.log('status: ', result.status.value);
-    joints = joints.map((val, idx) => val + velocities[idx]*0.01);
-    // if (newDestinationFlag) {
-    if (result.status.value === 0 && counter < 20000) {
-      // console.log('velocity: '+velocities.map(v => v.toFixed(3)).join(', '));
-      // console.log('joints: '+ joints.map(v => (v*57.2958).toFixed(1)).join(', '));
-      // console.log('destinatoin: '+controllerTfVec.slice(12, 15)
-      // 		  .map(v => v.toFixed(3)).join(', '));
-      // // console.log('status: ', result.status.value);
-      // console.log('Updated joints: '
-      // 		  +  joints.map(v => (v*57.2958).toFixed(1)).join(', '));
-      //newDestinationFlag = false; // リセットフラグを下ろす
+    switch (result.status.value) {
+    case SlrmModule.CmdVelGeneratorStatus.OK.value:
+      prevJoints = joints;
+      joints = joints.map((val, idx) => val + velocities[idx]* timeStep);
+      break;
+    case SlrmModule.CmdVelGeneratorStatus.END.value:
+      // 目標位置に到達した場合の処理
+      // cmdPoseExists = false; 
+      break;
+    case SlrmModule.CmdVelGeneratorStatus.SINGULARITY.value:
+      // 現状のCmdVelGeneratorではこの状態は発生せずREWINDに変わる
+      // cmdPoseExists = false; // cmdPoseが存在しない
+      console.error('CmdVelGenerator returned SINGULARITY status');
+      break;
+    case SlrmModule.CmdVelGeneratorStatus.REWIND.value:
+      joints = prevJoints; // 前の状態に戻す. 特異点に入る直前の状態になる
+      // cmdPoseExists = false; // cmdPoseが存在しない
+      break;
+    case SlrmModule.CmdVelGeneratorStatus.ERROR.value:
+      console.error('CmdVelGenerator returned ERROR status');
+      break;
+    default:
+      console.error('Unknown status from CmdVelGenerator:', result.status.value);
+      break;
     }
-    // let x = Math.floor(controllerTfVec[12]*1000) + counter;
-    // let y = Math.floor(controllerTfVec[13]*1000) + counter;
-    // let z = Math.floor(controllerTfVec[14]*1000) + counter;
-    self.postMessage({type: 'joints', joints: joints}); // [x, y, z]});
-    counter += 1000;
+    let limitFlag = Array(joints.length).fill(0);
+    joints = joints.map((val, idx) => {
+      if (val > jointUpperLimits[idx]) {
+	limitFlag[idx] = 1;
+	return jointUpperLimits[idx];
+      }
+      if (val < jointLowerLimits[idx]) {
+	limitFlag[idx] = -1;
+	return jointLowerLimits[idx];
+      }
+      return val;
+    });
+    self.postMessage({type: 'joints', joints: joints});
+    self.postMessage({type: 'status', status: result.status.value,
+		      condition_number: result.other.condition_number,
+		      manipulability: result.other.manipulability,
+		      sensitivity_scale: result.other.sensitivity_scale});
+    self.postMessage({type: 'limit_status', limit_flag: limitFlag});
+    counter ++;
+    if (counter <= 1n) {
+      console.log('type of logInterval: ', typeof logInterval,
+		  ' type of counter: ', typeof counter);
+    }
+    if (counter % logInterval === 0n) {
+      // ログ出力
+      console.log('status: ', result.status.value ,
+		  ' condition: ' , result.other.condition_number.toFixed(2) ,
+		  ' manipulability: ' , result.other.manipulability.toFixed(3) ,
+		  ' scale: ' , result.other.sensitivity_scale.toFixed(3)
+);
+      console.log('limit status: ' + limitFlag.join(', '));
+      //   console.log('Worker: joints at ' + (counter / (60n*100n / BigInt(timeInterval))).toString() + ' minutes: ' + joints.map(v => (v*57.2958).toFixed(1)).join(', '));
+    }
   }
-}, 10);
+}, timeInterval);
 
 // ******** worker start ********
 workerState = st.waitingRobotType;

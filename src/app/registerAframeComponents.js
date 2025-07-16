@@ -1,5 +1,6 @@
 import {urdf2mrJoints} from './constTransformGen'
 let registered = false;
+let lastUpdate = 0;
 
 export default function registerAframeComponents(options) {
   // const three2worldMat = three2worldMatGen();
@@ -150,10 +151,13 @@ export default function registerAframeComponents(options) {
         console.log('exit-vr');
       });
     },
-    tick: function () {
+    tick: function (time, timeDelta) {
       if (workerLastJoints.current) {
 	// console.log('worker joints: ', urdf2mrJoints(workerLastJoints.current).map(v => v.toFixed(3)).join(', '));
-	setThetaBody(urdf2mrJoints(workerLastJoints.current));
+	if (time - lastUpdate > 33) {
+	  lastUpdate = time;
+	  setThetaBody(urdf2mrJoints(workerLastJoints.current));
+	}
 	// console.log('workerLastJoints: '
 	// 	    + workerLastJoints.current[0].toFixed(3) + ', '
 	// 	    + workerLastJoints.current[1].toFixed(3) + ', '
