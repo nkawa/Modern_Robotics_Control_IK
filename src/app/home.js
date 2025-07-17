@@ -12,7 +12,9 @@ const mr = require('../modern_robotics/modern_robotics_core.js');
 const RobotDynamcis = require('../modern_robotics/modern_robotics_Dynamics.js');
 
 // Load Robot Model
-const robot_model = "agilex_piper"; // Change this to your robot model
+// const robot_model = "agilex_piper"; // Change this to your robot model
+const robot_model = "jaka_zu_5"; // Change this to your robot model
+
 const rk = new RobotDynamcis(robot_model);
 const M = rk.get_M();
 const Mlist = rk.get_Mlist();
@@ -93,7 +95,12 @@ export default function DynamicHome(props) {
   /*** Robot Controller ***/
   // Initial joint and tool angles
   // const theta_body_initial = mr.deg2rad([0, -30, 70, 0, 65, 0]);
-  const theta_body_initial = [0, -0.27473, 1.44144, 0, 1.22586, 0];
+  // agilex_piper initial angles
+  // const theta_body_initial = [0, -0.27473, 1.44144, 0, 1.22586, 0];
+
+  //jaka_zu_5 initial angles
+  const theta_body_initial = mr.deg2rad([0,20,90,-20,-90,0]);
+
   const [theta_body, setThetaBody] = React.useState(theta_body_initial);
 
   // const dtheta_body_initial = [0, 0, 0, 0, 0, 0];
