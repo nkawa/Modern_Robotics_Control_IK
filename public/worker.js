@@ -123,6 +123,14 @@ self.onmessage = function(event) {
 		    "ERROR:" + SlrmModule.CmdVelGeneratorStatus.ERROR.value + ", " +
 		    "END:" + SlrmModule.CmdVelGeneratorStatus.END.value);
 	cmdVelGen.setExactSolution(false); // singularity通過のため
+	cmdVelGen.setLinearVelocityLimit(10.0); // 10 m/s
+	cmdVelGen.setAngularVelocityLimit(2*Math.PI); // 2Pi rad/s
+	cmdVelGen.setAngularGain(20.0); // 20 s^-1
+	cmdVelGen.setLinearGain(20.0); // 20 s^-1
+	const jointVelocityLimit
+	  = makeDoubleVector(Array(revolutes.length).fill(Math.PI*20)); // 20Pi rad/s
+	cmdVelGen.setJointVelocityLimit(jointVelocityLimit); // ジョイント速度制限を設定
+	jointVelocityLimit.delete();
 	// なにかの加減でオブジェクト生成に失敗した場合はここでエラーがthrownされる
 	workerState = st.generatorReady;
 	self.postMessage({type: 'generator_ready'});
@@ -219,8 +227,8 @@ self.setInterval( () => {
     self.postMessage({type: 'status', status: result.status.value,
 		      condition_number: result.other.condition_number,
 		      manipulability: result.other.manipulability,
-		      sensitivity_scale: result.other.sensitivity_scale});
-    self.postMessage({type: 'limit_status', limit_flag: limitFlag});
+		      sensitivity_scale: result.other.sensitivity_scale,
+		      limit_flag: limitFlag});
     counter ++;
     if (counter <= 1n) {
       console.log('type of logInterval: ', typeof logInterval,
