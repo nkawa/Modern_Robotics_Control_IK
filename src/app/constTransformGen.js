@@ -34,22 +34,22 @@ const deg180 = Math.PI; // 180度をラジアンに変換
 
 export function mr2urdfJoints(mrJoints) {
   const ud = [
-    mrJoints[0],
-    -mrJoints[1] + deg90,
-    -mrJoints[2],
-    -mrJoints[3] + deg90,
-    mrJoints[4] - deg180,
+    mrJoints[0] + deg180,
+    mrJoints[1] - deg90,
+    mrJoints[2],
+    mrJoints[3] - deg90,
+    mrJoints[4],
     mrJoints[5]
   ];
   return ud;
 }
 export function urdf2mrJoints(udJoints) {
   const mr = [
-    udJoints[0],
-    -udJoints[1] + deg90,
-    -udJoints[2],
-    -udJoints[3] + deg90,
-    udJoints[4] + deg180,
+    udJoints[0] - deg180,
+    udJoints[1] - deg90,
+    udJoints[2],
+    udJoints[3] - deg90,
+    udJoints[4],
     udJoints[5]
   ];
   return mr;

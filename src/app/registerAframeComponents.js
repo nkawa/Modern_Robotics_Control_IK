@@ -55,7 +55,7 @@ export default function registerAframeComponents(options) {
       this.el.addEventListener('bbuttondown', () => set_button_b_on(true));
       this.el.addEventListener('bbuttonup', () => set_button_b_on(false));
 
-      this.el.addEventListener('thumbstickmoved', this.logThumbstick);
+      // this.el.addEventListener('thumbstickmoved', this.logThumbstick);
       this.lastPose = new THREE.Matrix4();
       this.count = 0;
     },

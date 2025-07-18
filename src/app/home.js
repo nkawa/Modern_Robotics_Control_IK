@@ -172,9 +172,10 @@ export default function DynamicHome(props) {
     // **** piper
     // const theta_body_initial = [0, -15, 82.6, 0, 70, 0].map(x=>x*Math.PI/180);
     // **** jaka_zu_5 initial angles
-    // // jaka_zu_5 urdfのゼロ姿勢
-    // const theta_body_initial = [0, 90, 0, 90, 180, 0].map(x=>x*Math.PI/180);
-    // const theta_body_initial = [0, 60, 30, 70, 150, 0].map(x=>x*Math.PI/180);
+    // // jaka_zu_5 joint ZERO pose in urdf
+    // const theta_body_initial = [180, -90, 0, -90, 0, 0].map(x=>x*Math.PI/180);
+    // // jaka_zu_5 near urdf ZERO
+    // const theta_body_initial = [180, -60, -30, -70, 30, 0].map(x=>x*Math.PI/180);
     const theta_body_initial = [0,20,90,-20,-90,0].map(x=>x*Math.PI/180);
     return theta_body_initial});
   const [theta_tool, setThetaTool] = React.useState(()=>{
