@@ -25,17 +25,32 @@ export function world2threeMatGen() {
   return world2threeCache.clone();
 }
 
-const j2UrdfZero = 1.46984632679; // Pi/2.0 - 0.10095
-const j3UrdfZero = -2.95319327649; // - (Pi/2 - 0.10095) - Pi/2 + ArcTan[0.25075,0.021984]
+// // for piper
+// const j2UrdfZero = 1.46984632679; // Pi/2.0 - 0.10095
+// const j3UrdfZero = -2.95319327649; // - (Pi/2 - 0.10095) - Pi/2 + ArcTan[0.25075,0.021984]
+// for Jaka
+const deg90 = Math.PI / 2.0; // 90度をラジアンに変換
+const deg180 = Math.PI; // 180度をラジアンに変換
+
 export function mr2urdfJoints(mrJoints) {
-  const ud = [...mrJoints];
-  ud[1] += j2UrdfZero; // J2のオフセット
-  ud[2] += j3UrdfZero; // J3のオフセット
+  const ud = [
+    mrJoints[0],
+    -mrJoints[1] + deg90,
+    -mrJoints[2],
+    -mrJoints[3] + deg90,
+    mrJoints[4] - deg180,
+    mrJoints[5]
+  ];
   return ud;
 }
 export function urdf2mrJoints(udJoints) {
-  const mr = [...udJoints];
-  mr[1] -= j2UrdfZero; // J2のオフセット
-  mr[2] -= j3UrdfZero; // J3のオフセット
+  const mr = [
+    udJoints[0],
+    -udJoints[1] + deg90,
+    -udJoints[2],
+    -udJoints[3] + deg90,
+    udJoints[4] + deg180,
+    udJoints[5]
+  ];
   return mr;
 }

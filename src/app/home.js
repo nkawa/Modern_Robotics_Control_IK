@@ -19,7 +19,7 @@ import { three2worldMatGen, world2threeMatGen,
 // MQTT Topics
 const MQTT_REQUEST_TOPIC = "mgr/request";
 const MQTT_DEVICE_TOPIC = "dev/" + idtopic;
-const MQTT_CTRL_TOPIC = "vr/"; 
+const MQTT_CTRL_TOPIC = "control/"; 
 const MQTT_ROBOT_STATE_TOPIC = "robot/";
 
 export default function DynamicHome(props) {
@@ -32,7 +32,8 @@ export default function DynamicHome(props) {
 
   // initilize Modern Robotics parameters
   // Load Robot Model
-  const [robot_model] = React.useState("agilex_piper"); // Change this to your robot model
+//  const [robot_model] = React.useState("agilex_piper"); // Change this to your robot model
+  const [robot_model] = React.useState("jaka_zu_5"); // Change this to your robot model
   // const [rk] = React.useState(()=> new RobotDynamcis(robot_model));
   // const [jointLimits] = React.useState(rk.jointLimits);
   // const [toolLimit] = React.useState(rk.toolLimit);
@@ -167,11 +168,14 @@ export default function DynamicHome(props) {
   /*** Robot Controller ***/
   const [theta_body, setThetaBody] = React.useState(()=>{
     // Initial joint and tool angles
-    // // // // const theta_body_initial = mr.deg2rad([0, -30, 70, 0, 65, 0]);
-    // // // const theta_body_initial = [0, -0.27473, 1.44144, 0, 1.22586, 0];
     // const theta_body_initial = [0, 0, 0, 0, 0, 0].map(x=>x*Math.PI/180);
-    // const theta_body_initial = [0, -30, 30, 0, 30, 0].map(x=>x*Math.PI/180);
-    const theta_body_initial = [0, -15, 82.6, 0, 70, 0].map(x=>x*Math.PI/180);
+    // **** piper
+    // const theta_body_initial = [0, -15, 82.6, 0, 70, 0].map(x=>x*Math.PI/180);
+    // **** jaka_zu_5 initial angles
+    // // jaka_zu_5 urdfのゼロ姿勢
+    // const theta_body_initial = [0, 90, 0, 90, 180, 0].map(x=>x*Math.PI/180);
+    // const theta_body_initial = [0, 60, 30, 70, 150, 0].map(x=>x*Math.PI/180);
+    const theta_body_initial = [0,20,90,-20,-90,0].map(x=>x*Math.PI/180);
     return theta_body_initial});
   const [theta_tool, setThetaTool] = React.useState(()=>{
     const theta_tool_inital = 0;

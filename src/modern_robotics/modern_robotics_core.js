@@ -1508,7 +1508,7 @@ function IKinBody(Blist, M, T, thetalist0, eomg, ev) {
 function IKinSpace(Slist, M, T, thetalist0, eomg, ev) {
     let thetalist = thetalist0.slice();
     let i = 0;
-    const maxiterations = 20;
+    const maxiterations = 50;
     let Tsb = FKinSpace(M, Slist, thetalist);
     let Vs = matDot(Adjoint(Tsb), se3ToVec(MatrixLog6(matDot(TransInv(Tsb), T))));
     let err = (Norm(Vs.slice(0, 3)) > eomg) || (Norm(Vs.slice(3, 6)) > ev);
