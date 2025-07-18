@@ -10,10 +10,10 @@ import { three2worldMatGen, world2threeMatGen,
 	   mr2urdfJoints, urdf2mrJoints
        } from './constTransformGen';
 
-const mr = require('../modern_robotics/modern_robotics_core.js');
-// const RobotKinematics = require('../modern_robotics/modern_robotics_Kinematics.js');
-const RobotDynamcis = require('../modern_robotics/modern_robotics_Dynamics.js');
-const Euler_order = 'ZYX'; // Euler angle order
+// const mr = require('../modern_robotics/modern_robotics_core.js');
+// // const RobotKinematics = require('../modern_robotics/modern_robotics_Kinematics.js');
+// const RobotDynamcis = require('../modern_robotics/modern_robotics_Dynamics.js');
+// const Euler_order = 'ZYX'; // Euler angle order
 
 
 // MQTT Topics
@@ -33,18 +33,18 @@ export default function DynamicHome(props) {
   // initilize Modern Robotics parameters
   // Load Robot Model
   const [robot_model] = React.useState("agilex_piper"); // Change this to your robot model
-  const [rk] = React.useState(()=> new RobotDynamcis(robot_model));
-  const [jointLimits] = React.useState(rk.jointLimits);
-  const [toolLimit] = React.useState(rk.toolLimit);
-  const [M] = React.useState(rk.get_M());
-  const [Blist] = React.useState(()=>{
-    // const Mlist = rk.get_Mlist();
-    // const Glist = rk.get_Glist();
-    // const Kplist = rk.get_Kplist(); 
-    // const Kilist = rk.get_Kilist(); 
-    // const Kdlist = rk.get_Kdlist(); 
-    const Slist = rk.get_Slist();
-    return mr.SlistToBlist(M, Slist);}); // Convert Slist to Blist
+  // const [rk] = React.useState(()=> new RobotDynamcis(robot_model));
+  // const [jointLimits] = React.useState(rk.jointLimits);
+  // const [toolLimit] = React.useState(rk.toolLimit);
+  // const [M] = React.useState(rk.get_M());
+  // const [Blist] = React.useState(()=>{
+  //   // const Mlist = rk.get_Mlist();
+  //   // const Glist = rk.get_Glist();
+  //   // const Kplist = rk.get_Kplist(); 
+  //   // const Kilist = rk.get_Kilist(); 
+  //   // const Kdlist = rk.get_Kdlist(); 
+  //   const Slist = rk.get_Slist();
+  //   return mr.SlistToBlist(M, Slist);}); // Convert Slist to Blist
 
   const [now, setNow] = React.useState(new Date())
   const [rendered,set_rendered] = React.useState(false)
@@ -74,7 +74,7 @@ export default function DynamicHome(props) {
   const [c_deg_y,set_c_deg_y] = React.useState(150)
   const [c_deg_z,set_c_deg_z] = React.useState(0)
 
-  const [dsp_message,set_dsp_message] = React.useState("")
+  const [dsp_message,set_dsp_message] = React.useState("XXX")
 
   // Robot Tool
   const toolNameList = ["No tool"]
@@ -97,6 +97,7 @@ export default function DynamicHome(props) {
   // Worker thread generation
   const workerRef = React.useRef(null);
   const workerLastJoints = React.useRef(null);
+  const workerLastStatus = React.useRef(null);
   // const useWorkerRef = React.useRef(true); // Flag to indicate if the worker is ready
   React.useEffect(() => {
     if (workerRef.current === null) {
@@ -123,14 +124,31 @@ export default function DynamicHome(props) {
 	    workerLastJoints.current = event.data.joints;
 	  }
 	  break;
+	case 'status':
+	  workerLastStatus.current = event.data;
+	  break;
 	}
       };
     }
+    // **** set status text to "dsp_message" ****
+    const intervalId = setInterval(() => {
+      // const statusText = 'line1'+'\n'+'line2\nline3';
+      const statusText =
+	    'status: ' + workerLastStatus.current?.status + '\n' +
+	    ' cond:' + workerLastStatus.current?.condition_number.toFixed(2) +
+	    '  manip:'  + workerLastStatus.current?.manipulability.toFixed(3) +
+	    '  k:'  + workerLastStatus.current?.sensitivity_scale.toFixed(3) +
+	    + ' ' + '\n' +
+	    '  limit flags: ' + (workerLastStatus.current?.limit_flag || []).join(', ');
+      set_dsp_message(statusText);
+    }, 200); // Update every 200ms
+    //
     return () => {
       if (workerRef.current) {
 	workerRef.current.terminate();
 	workerRef.current = null;
       }
+      clearInterval(intervalId);
     };
   }, []);
 
@@ -163,73 +181,73 @@ export default function DynamicHome(props) {
   const [theta_body_guess, setThetaBodyGuess] = React.useState(theta_body);
 
 
-  const [pose_ee, setPoseEE] = React.useState(() => {
-    // Foward Kinematics solution
-    const T0 = mr.FKinBody(M, Blist, theta_body);
-    const [R0, p0] = mr.TransToRp(T0);
-    // Position and orientation (rotation matrix) of end effector
-    const pose_ee_initial = {
-      position: p0,
-      // orientation: R0
-      euler: mr.RotMatToEuler(R0, Euler_order)
-    };
-    return pose_ee_initial;});
-  const [pose_ee_Three, setPoseEEThree] = React.useState(() => {
-    const pose_ee_Three_initial = {
-      position: mr.worlr2three(pose_ee.position),
-      euler: mr.worlr2three(pose_ee.euler),
-    };
-    return pose_ee_Three_initial;});
+  // const [pose_ee, setPoseEE] = React.useState(() => {
+  //   // Foward Kinematics solution
+  //   const T0 = mr.FKinBody(M, Blist, theta_body);
+  //   const [R0, p0] = mr.TransToRp(T0);
+  //   // Position and orientation (rotation matrix) of end effector
+  //   const pose_ee_initial = {
+  //     position: p0,
+  //     // orientation: R0
+  //     euler: mr.RotMatToEuler(R0, Euler_order)
+  //   };
+  //   return pose_ee_initial;});
+  // const [pose_ee_Three, setPoseEEThree] = React.useState(() => {
+  //   const pose_ee_Three_initial = {
+  //     position: mr.worlr2three(pose_ee.position),
+  //     euler: mr.worlr2three(pose_ee.euler),
+  //   };
+  //   return pose_ee_Three_initial;});
 
-  // Update end effector position and orientation (for webcontroller)
-  React.useEffect(() => {
-    const T = mr.FKinBody(M, Blist, theta_body);
-    const [R, p] = mr.TransToRp(T);
-    const euler = mr.RotMatToEuler(R, Euler_order);
-    setPoseEE({position: p, euler: euler}); // Update to ZYX Euler angles
-    setPoseEEThree({
-      position: mr.worlr2three(pose_ee.position),
-      euler: mr.worlr2three(pose_ee.euler),
-    });
-    }, [...theta_body]);
+  // // Update end effector position and orientation (for webcontroller)
+  // React.useEffect(() => {
+  //   const T = mr.FKinBody(M, Blist, theta_body);
+  //   const [R, p] = mr.TransToRp(T);
+  //   const euler = mr.RotMatToEuler(R, Euler_order);
+  //   setPoseEE({position: p, euler: euler}); // Update to ZYX Euler angles
+  //   setPoseEEThree({
+  //     position: mr.worlr2three(pose_ee.position),
+  //     euler: mr.worlr2three(pose_ee.euler),
+  //   });
+  //   }, [...theta_body]);
   
   /**
    *  Control Methods
    * /
    * 
   /** Kinamatics Control **/
-  function KinematicsControl(tf) {
-    const T_sd = [
-      [tf.elements[0], tf.elements[4], tf.elements[8], tf.elements[12]],
-      [tf.elements[1], tf.elements[5], tf.elements[9], tf.elements[13]],
-      [tf.elements[2], tf.elements[6], tf.elements[10], tf.elements[14]],
-      [0, 0, 0, 1]];
-    KinamaticsControlAux(T_sd);
-  }
-  function KinamaticsControl(newPos, newEuler) {
-    const T_sd = mr.RpToTrans(mr.EulerToRotMat(newEuler, Euler_order), newPos);
-    KinamaticsControlAux(T_sd);
-  }
-  function KinamaticsControlAux(T_sd)
-  {
-    const [thetalist_sol, ik_success] = mr.IKinBody(Blist, M, T_sd, theta_body_guess, 1e-5, 1e-5);
+  // function KinematicsControl(tf) {
+  //   const T_sd = [
+  //     [tf.elements[0], tf.elements[4], tf.elements[8], tf.elements[12]],
+  //     [tf.elements[1], tf.elements[5], tf.elements[9], tf.elements[13]],
+  //     [tf.elements[2], tf.elements[6], tf.elements[10], tf.elements[14]],
+  //     [0, 0, 0, 1]];
+  //   KinamaticsControlAux(T_sd);
+  // }
+  // function KinamaticsControl(newPos, newEuler) {
+  //   const T_sd = mr.RpToTrans(mr.EulerToRotMat(newEuler, Euler_order), newPos);
+  //   KinamaticsControlAux(T_sd);
+  // }
+  // function KinamaticsControlAux(T_sd)
+  // {
+  //   const [thetalist_sol, ik_success] = mr.IKinBody(Blist, M, T_sd, theta_body_guess, 1e-5, 1e-5);
 
-    if (ik_success) {
-      const thetalist_sol_limited = thetalist_sol.map((theta, i) =>
-      Math.max(jointLimits[i].min, Math.min(jointLimits[i].max, theta))
-      );
-      // const theta_tmp = theta_body.map(x => x); // copy theta_body
-      // theta_tmp[4] = theta_tmp[4] + 3.14159/180; // add 0.1 degree to theta_5
-      // theta_tmp[0] = theta_tmp[0] + 3.14159/180; // add 0.1 degree to theta_5
-      // setThetaBody(theta_tmp);
-      setThetaBody(thetalist_sol_limited);
-      setThetaBodyGuess(thetalist_sol_limited);
-      set_target_error(false);
-    } else {
-      console.warn("IK failed to converge");
-      set_target_error(true);
-    }
-  }
+  //   if (ik_success) {
+  //     const thetalist_sol_limited = thetalist_sol.map((theta, i) =>
+  //     Math.max(jointLimits[i].min, Math.min(jointLimits[i].max, theta))
+  //     );
+  //     // const theta_tmp = theta_body.map(x => x); // copy theta_body
+  //     // theta_tmp[4] = theta_tmp[4] + 3.14159/180; // add 0.1 degree to theta_5
+  //     // theta_tmp[0] = theta_tmp[0] + 3.14159/180; // add 0.1 degree to theta_5
+  //     // setThetaBody(theta_tmp);
+  //     setThetaBody(thetalist_sol_limited);
+  //     setThetaBodyGuess(thetalist_sol_limited);
+  //     set_target_error(false);
+  //   } else {
+  //     console.warn("IK failed to converge");
+  //     set_target_error(true);
+  //   }
+  // }
 
 
   React.useEffect(() => {
@@ -282,6 +300,9 @@ export default function DynamicHome(props) {
 				      endLinkPose: newEndLinkPose.elements });
       // KinamaticsControl(newPos, newEuler);
       // KinematicsControl(newEndLinkPose);
+      // if (workerLastJoints.current) {
+      // 	setThetaBody(urdf2mrJoints(workerLastJoints.current));
+      // }
     }
     // Update last position and orientation
     // ** move to theta_body's useEffect **
@@ -338,8 +359,8 @@ export default function DynamicHome(props) {
     selectedMode, setSelectedMode,
     theta_body, setThetaBody,
     theta_tool, setThetaTool,
-    pose_ee, setPoseEE,
-    onTargetChange: KinamaticsControl,
+    // pose_ee, setPoseEE,
+    // onTargetChange: KinamaticsControl,
     // onTargetChange: DynamicsControl
   }), [
     robotName, robotNameList, set_robotName,
@@ -350,8 +371,8 @@ export default function DynamicHome(props) {
     selectedMode, setSelectedMode,
     theta_body, setThetaBody,
     theta_tool, setThetaTool,
-    pose_ee, setPoseEE,
-    KinamaticsControl,
+    // pose_ee, setPoseEE,
+    // KinamaticsControl,
     // DynamicsControl
   ]);
 
@@ -368,7 +389,7 @@ export default function DynamicHome(props) {
       set_c_deg_x, set_c_deg_y, set_c_deg_z,
       vrModeRef,
       controller_object,
-      Euler_order,
+      // Euler_order,
       props,
       onXRFrameMQTT,
       workerLastJoints,
@@ -466,8 +487,8 @@ export default function DynamicHome(props) {
       c_deg_z={c_deg_z}
       viewer={props.viewer}
       monitor={props.monitor}
-      position_ee={pose_ee_Three.position}
-      euler_ee={pose_ee_Three.euler}
+      // position_ee={pose_ee_Three.position}
+      // euler_ee={pose_ee_Three.euler}
       // vr_controller_pos={vr_controller_pos}
       // vr_controller_euler={vr_controller_euler}
     />

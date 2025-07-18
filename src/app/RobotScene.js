@@ -22,12 +22,12 @@ export default function RobotScene(props) {
     theta_tool,
     dsp_message,
     c_pos_x, c_pos_y, c_pos_z, c_deg_x, c_deg_y, c_deg_z, 
-    position_ee, euler_ee, 
+    // position_ee, euler_ee, 
     // vr_controller_pos, vr_controller_euler,
   } = props;
 
   const rad2deg = rad => rad * 180 / Math.PI;
-  const euler_ee_deg = euler_ee.map(rad2deg);
+  // const euler_ee_deg = euler_ee.map(rad2deg);
 
   if (!rendered) {
     return (
@@ -37,6 +37,7 @@ export default function RobotScene(props) {
     );
     }
 
+  // console.log("dsp_message: ", dsp_message);
   return (
     <>
       <a-scene scene xr-mode-ui="XRMode: ar">
@@ -58,39 +59,12 @@ export default function RobotScene(props) {
 
           {/* Camera */}
           <a-camera id="camera" cursor="rayOrigin: mouse;" position="0 0 0">
-            <a-entity jtext={`text: ${dsp_message}; color: black; background:rgb(31, 219, 131); border: #000000`} position="0 0.7 -1.4"></a-entity>
+            <a-entity
+              text={`value: ${dsp_message}; color: yellow; backgroundColor: rgb(31, 219, 131); border: #000000; whiteSpace: pre`}
+              position="0 0.7 -1.4"
+            />
           </a-camera>
-
-          {/* End Effector */}
-          </a-entity>
-          <a-sphere 
-            position={`${position_ee[0]} ${position_ee[1]} ${position_ee[2]}`} 
-            scale="0.012 0.012 0.012" 
-            color={target_error ? "red" : "yellow"} 
-            visible={true}>
-          </a-sphere>
-          <a-entity
-            position={`${position_ee[0]} ${position_ee[1]} ${position_ee[2]}`}
-
-            // ZYZ
-            // rotation={`${euler_ee_deg[0]} ${-euler_ee_deg[2]} ${-euler_ee_deg[1]} `}
-            // rotation={`${euler_ee_deg[0]} ${euler_ee_deg[1]} ${-euler_ee_deg[2]} `}
-
-            // ZYX
-            rotation={`${euler_ee_deg[0]} ${-euler_ee_deg[2]} ${-euler_ee_deg[1]} `}
-          >
-            {/* ZYZ */}
-            {/*
-            <a-cylinder position="0 0 -0.015" rotation="90 0 0" height="0.0250" radius="0.0015" color="red" />
-            <a-cylinder position="-0.015 0 0" rotation="0 0 90" height="0.0250" radius="0.0015" color="green" />
-            <a-cylinder position="0 0.025 0" rotation="0 90 0" height="0.0550" radius="0.0015" color="blue" />
-            */}
-            {/* ZYX */}
-            <a-cylinder position="0      0 -0.015" rotation="90 0  0 " height="0.0250" radius="0.0015" color="red" /> 
-            <a-cylinder position="-0.015 0      0" rotation="0  0 90" height="0.0250" radius="0.0015" material="color: #00ff00" />
-            <a-cylinder position="0      0.025  0" rotation="0  90 0 " height="0.0550" radius="0.0015" color="blue" />
-          </a-entity>
-
+        </a-entity>
           {/* VR Controller Pose */}
           {/* <a-square 
             position={`${vr_controller_pos[0]} ${vr_controller_pos[1]} ${vr_controller_pos[2]}`} 

@@ -40,9 +40,21 @@ const Model = (props) => {
                   {/* J6 */}
                   <a-entity j_id="6" gltf-model="#j6" position={`0 0 0`} rotation={`0 0 ${theta6}`}>
                     {/* Tool */}
-                      <a-entity gltf-model="#j6_1" position={`${finger_pos} 0 ${L_56+L_ee}`}></a-entity>
-                      <a-entity gltf-model="#j6_2" position={`${-finger_pos} 0 ${L_56+L_ee}`}></a-entity>
-                      <a-entity end-link position={`0 0 ${L_56+L_ee}`} rotation={`0 0 -90`}></a-entity>
+                    <a-entity gltf-model="#j6_1" position={`${finger_pos} 0 ${L_56+L_ee}`}></a-entity>
+                    <a-entity gltf-model="#j6_2" position={`${-finger_pos} 0 ${L_56+L_ee}`}></a-entity>
+                    <a-entity end-link position={`0 0 ${L_56+L_ee}`} rotation={`0 0 -90`}>
+                      <a-sphere 
+                        scale="0.012 0.012 0.012" 
+                        color="yellow"
+                        visible={true}>
+                      </a-sphere>
+                      <a-cylinder position="0      0 -0.015" rotation="90 0  0 "
+                                  height="0.0250" radius="0.0015" color="red" /> 
+                      <a-cylinder position="-0.015 0      0" rotation="0  0 90"
+                                  height="0.0250" radius="0.0015" material="color: #00ff00" />
+                      <a-cylinder position="0      0.025  0" rotation="0  90 0 "
+                                  height="0.0550" radius="0.0015" color="blue" />
+                    </a-entity>
                   </a-entity>
                 </a-entity>
               </a-entity>
@@ -67,3 +79,4 @@ const Select_Robot = (props)=>{
 }
 
 export { Select_Robot };
+1

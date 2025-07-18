@@ -19,7 +19,7 @@ export default function registerAframeComponents(options) {
     set_c_deg_x, set_c_deg_y, set_c_deg_z,
     vrModeRef,
     controller_object,
-    Euler_order,
+    // Euler_order,
     props,
     onXRFrameMQTT,
     workerLastJoints,
@@ -40,7 +40,7 @@ export default function registerAframeComponents(options) {
     schema: { type: 'string', default: '' },
     init: function () {
       set_controller_object(this.el.object3D);
-      this.el.object3D.rotation.order = Euler_order;
+      // this.el.object3D.rotation.order = Euler_order;
       // Trigger 
       this.el.addEventListener('triggerdown', () => set_trigger_on(true));
       this.el.addEventListener('triggerup', () => set_trigger_on(false));
@@ -55,8 +55,16 @@ export default function registerAframeComponents(options) {
       this.el.addEventListener('bbuttondown', () => set_button_b_on(true));
       this.el.addEventListener('bbuttonup', () => set_button_b_on(false));
 
+      this.el.addEventListener('thumbstickmoved', this.logThumbstick);
       this.lastPose = new THREE.Matrix4();
       this.count = 0;
+    },
+    logThumbstick: function (evt) {
+      // thumbStickInfo.current = evt.detail;
+      if (evt.detail.y > 0.35) { console.log("DOWN", evt.detail.y); }
+      if (evt.detail.y < -0.35) { console.log("UP", evt.detail.y); }
+      if (evt.detail.x < -0.35) { console.log("LEFT", evt.detail.x); }
+      if (evt.detail.x > 0.35) { console.log("RIGHT", evt.detail.x); }
     },
     tick: function () {
       const obj = this.el.object3D;
@@ -154,7 +162,7 @@ export default function registerAframeComponents(options) {
     tick: function (time, timeDelta) {
       if (workerLastJoints.current) {
 	// console.log('worker joints: ', urdf2mrJoints(workerLastJoints.current).map(v => v.toFixed(3)).join(', '));
-	if (time - lastUpdate > 33) {
+	if (time - lastUpdate > 16) {
 	  lastUpdate = time;
 	  setThetaBody(urdf2mrJoints(workerLastJoints.current));
 	}
