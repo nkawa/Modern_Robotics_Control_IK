@@ -34,7 +34,8 @@ const statusName = {
 
 // ******** definitions of global variables ********
 const timeInterval = 4; // time step for simulation in milliseconds
-const logInterval = 1000n/BigInt(timeInterval); // log interval in BigInt
+// const logInterval = 1000n/BigInt(timeInterval); // log interval in BigInt
+const logInterval = 0n;
 let controllerTfVec = null; // endLinkPoseの値を受け取るベクトル
 let counter = 0n;
 let joints = null; // joint position vector. size is 6,7 or 8
@@ -45,6 +46,7 @@ const jointLowerLimits = [];
 let cmdVelGen = null; // コマンド速度生成器WASMオブジェクト
 let makeDoubleVectorG = null; // helper function for DoubleVector
 // let newDestinationFlag = false; // 新しいdestinationが来たかどうか
+let exactSolution = false; // singularity通過のための設定
 
 // ******** helper functions ********
 // SlrmModuleを閉じ込めて、その関連オブジェクトを生成するhelper関数群
@@ -129,7 +131,7 @@ self.onmessage = function(event) {
 		    "OK:" + SlrmModule.CmdVelGeneratorStatus.OK.value + ", " +
 		    "ERROR:" + SlrmModule.CmdVelGeneratorStatus.ERROR.value + ", " +
 		    "END:" + SlrmModule.CmdVelGeneratorStatus.END.value);
-	cmdVelGen.setExactSolution(false); // singularity通過のため
+	cmdVelGen.setExactSolution(exactSolution); // 特異点通過のための設定
 	cmdVelGen.setLinearVelocityLimit(10.0); // 10 m/s
 	cmdVelGen.setAngularVelocityLimit(2*Math.PI); // 2Pi rad/s
 	cmdVelGen.setAngularGain(20.0); // 20 s^-1
@@ -168,6 +170,19 @@ self.onmessage = function(event) {
     // 		+ controllerTfVec[13].toFixed(3) + ', '
     // 		+ controllerTfVec[14].toFixed(3));
   } break;
+  case 'set_exact_solution':
+    if (workerState === st.generatorReady || workerState === st.slrmReady) {
+      if (data.exactSolution !== undefined) {
+	if (data.exactSolution === true) {
+	  exactSolution = true;
+	} else {
+	  exactSolution = false;
+	}
+	cmdVelGen.setExactSolution(exactSolution);
+	console.log('Exact solution for singularity set to: ', exactSolution);
+      }
+    }
+    break;
   default:
     break;
   }
@@ -231,7 +246,8 @@ function mainFunc(timeStep) {
       return val;
     });
     self.postMessage({type: 'joints', joints: joints});
-    self.postMessage({type: 'status', status: result.status.value,
+    self.postMessage({type: 'status', status: statusName[result.status.value],
+		      exact_solution: exactSolution,
 		      condition_number: result.other.condition_number,
 		      manipulability: result.other.manipulability,
 		      sensitivity_scale: result.other.sensitivity_scale,
@@ -241,7 +257,7 @@ function mainFunc(timeStep) {
     //   console.log('type of logInterval: ', typeof logInterval,
     // 		  ' type of counter: ', typeof counter);
     // }
-    if (counter % logInterval === 0n) {
+    if (logInterval !== 0n && counter % logInterval === 0n) {
       if (logPrevJoints !== null && joints !== null &&
 	  logPrevJoints.length === joints.length) {
 	if (Math.max(...logPrevJoints.map((v, i) => Math.abs(v - joints[i]))) > 0.005) {
