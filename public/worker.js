@@ -24,20 +24,29 @@ if (!SlrmModule) {
   console.error('Failed to load SlrmModule');
   throw new Error('SlrmModule could not be loaded');
 }
+const statusName = {
+  [SlrmModule.CmdVelGeneratorStatus.OK.value]: 'OK',
+  [SlrmModule.CmdVelGeneratorStatus.ERROR.value]: 'ERROR',
+  [SlrmModule.CmdVelGeneratorStatus.END.value]: 'END',
+  [SlrmModule.CmdVelGeneratorStatus.SINGULARITY.value]: 'SINGULARITY',
+  [SlrmModule.CmdVelGeneratorStatus.REWIND.value]: 'REWIND',
+};
 
 // ******** definitions of global variables ********
-const timeInterval = 10; // time step for simulation in milliseconds
-const timeStep = timeInterval / 1000; // time step in seconds
-const logInterval = 1000n/BigInt(timeInterval); // log interval in BigInt
+const timeInterval = 4; // time step for simulation in milliseconds
+// const logInterval = 1000n/BigInt(timeInterval); // log interval in BigInt
+const logInterval = 0n;
 let controllerTfVec = null; // endLinkPoseの値を受け取るベクトル
 let counter = 0n;
 let joints = null; // joint position vector. size is 6,7 or 8
 let prevJoints = null; // 前回のジョイントポジション
+let logPrevJoints = null; // ログ出力用の前回ジョイントポジション
 const jointUpperLimits = [];
 const jointLowerLimits = [];
 let cmdVelGen = null; // コマンド速度生成器WASMオブジェクト
 let makeDoubleVectorG = null; // helper function for DoubleVector
 // let newDestinationFlag = false; // 新しいdestinationが来たかどうか
+let exactSolution = false; // singularity通過のための設定
 
 // ******** helper functions ********
 // SlrmModuleを閉じ込めて、その関連オブジェクトを生成するhelper関数群
@@ -122,7 +131,15 @@ self.onmessage = function(event) {
 		    "OK:" + SlrmModule.CmdVelGeneratorStatus.OK.value + ", " +
 		    "ERROR:" + SlrmModule.CmdVelGeneratorStatus.ERROR.value + ", " +
 		    "END:" + SlrmModule.CmdVelGeneratorStatus.END.value);
-	cmdVelGen.setExactSolution(false); // singularity通過のため
+	cmdVelGen.setExactSolution(exactSolution); // 特異点通過のための設定
+	cmdVelGen.setLinearVelocityLimit(10.0); // 10 m/s
+	cmdVelGen.setAngularVelocityLimit(2*Math.PI); // 2Pi rad/s
+	cmdVelGen.setAngularGain(20.0); // 20 s^-1
+	cmdVelGen.setLinearGain(20.0); // 20 s^-1
+	const jointVelocityLimit
+	  = makeDoubleVector(Array(revolutes.length).fill(Math.PI*20)); // 20Pi rad/s
+	cmdVelGen.setJointVelocityLimit(jointVelocityLimit); // ジョイント速度制限を設定
+	jointVelocityLimit.delete();
 	// なにかの加減でオブジェクト生成に失敗した場合はここでエラーがthrownされる
 	workerState = st.generatorReady;
 	self.postMessage({type: 'generator_ready'});
@@ -153,13 +170,26 @@ self.onmessage = function(event) {
     // 		+ controllerTfVec[13].toFixed(3) + ', '
     // 		+ controllerTfVec[14].toFixed(3));
   } break;
+  case 'set_exact_solution':
+    if (workerState === st.generatorReady || workerState === st.slrmReady) {
+      if (data.exactSolution !== undefined) {
+	if (data.exactSolution === true) {
+	  exactSolution = true;
+	} else {
+	  exactSolution = false;
+	}
+	cmdVelGen.setExactSolution(exactSolution);
+	console.log('Exact solution for singularity set to: ', exactSolution);
+      }
+    }
+    break;
   default:
     break;
   }
 };
 
-// ******** worker main loop ********
-self.setInterval( () => {
+// ******** main function ********
+function mainFunc(timeStep) {
   if (workerState === st.slrmReady) {
     // 計算処理など
     if (cmdVelGen === null ||
@@ -216,29 +246,46 @@ self.setInterval( () => {
       return val;
     });
     self.postMessage({type: 'joints', joints: joints});
-    self.postMessage({type: 'status', status: result.status.value,
+    self.postMessage({type: 'status', status: statusName[result.status.value],
+		      exact_solution: exactSolution,
 		      condition_number: result.other.condition_number,
 		      manipulability: result.other.manipulability,
-		      sensitivity_scale: result.other.sensitivity_scale});
-    self.postMessage({type: 'limit_status', limit_flag: limitFlag});
+		      sensitivity_scale: result.other.sensitivity_scale,
+		      limit_flag: limitFlag});
     counter ++;
-    if (counter <= 1n) {
-      console.log('type of logInterval: ', typeof logInterval,
-		  ' type of counter: ', typeof counter);
-    }
-    if (counter % logInterval === 0n) {
-      // ログ出力
-      console.log('status: ', result.status.value ,
-		  ' condition: ' , result.other.condition_number.toFixed(2) ,
-		  ' manipulability: ' , result.other.manipulability.toFixed(3) ,
-		  ' scale: ' , result.other.sensitivity_scale.toFixed(3)
-);
-      console.log('limit status: ' + limitFlag.join(', '));
-      //   console.log('Worker: joints at ' + (counter / (60n*100n / BigInt(timeInterval))).toString() + ' minutes: ' + joints.map(v => (v*57.2958).toFixed(1)).join(', '));
+    // if (counter <= 1n) {
+    //   console.log('type of logInterval: ', typeof logInterval,
+    // 		  ' type of counter: ', typeof counter);
+    // }
+    if (logInterval !== 0n && counter % logInterval === 0n) {
+      if (logPrevJoints !== null && joints !== null &&
+	  logPrevJoints.length === joints.length) {
+	if (Math.max(...logPrevJoints.map((v, i) => Math.abs(v - joints[i]))) > 0.005) {
+	  // ログ出力
+	  console.log('counter:', counter,
+		      'status: ', statusName[result.status.value] ,
+		      ' condition:' , result.other.condition_number.toFixed(2) ,
+		      ' m:' , result.other.manipulability.toFixed(3) ,
+		      ' k:' , result.other.sensitivity_scale.toFixed(3)
+		      + '\n' +
+		      'limit flags: ' + limitFlag.join(', '));
+	  //   console.log('Worker: joints at ' + (counter / (60n*100n / BigInt(timeInterval))).toString() + ' minutes: ' + joints.map(v => (v*57.2958).toFixed(1)).join(', '));
+	}
+      }
+      logPrevJoints = joints; // ログ出力用の前回ジョイントポジションを更新 配列の複製不要
     }
   }
-}, timeInterval);
+}
+
+// ******** worker main loop ********
+function mainLoop(prevTime = performance.now()-timeInterval) {
+  const now = performance.now();
+  const deltaTime = now - prevTime;
+  mainFunc(deltaTime / 1000); // time step in seconds
+  setTimeout(() => mainLoop(now), 0); // 次のループをスケジュール
+}
 
 // ******** worker start ********
 workerState = st.waitingRobotType;
 self.postMessage({type: 'ready'});
+mainLoop(); // メインループを開始
