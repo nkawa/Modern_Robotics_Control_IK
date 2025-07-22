@@ -25,21 +25,45 @@ export default function registerAframeComponents(options) {
     workerLastJoints,
     setThetaBody,
     endLinkPose,
+    baseLinkPoseInv,
   } = options;
   
   AFRAME.registerComponent('robot-click', {
     init: function () {
+      if (this.el.object3D) {
+	baseLinkPoseInv.current = this.el.object3D.matrixWorld.clone().invert();
+	console.log('baseLinkPoseInv: ', baseLinkPoseInv.current.elements[9].toFixed(3), ', ',
+		    -baseLinkPoseInv.current.elements[8].toFixed(3), ', ',
+		    baseLinkPoseInv.current.elements[4].toFixed(3));
+      }
       this.el.addEventListener('click', () => {
         robotChange();
         console.log('robot-click');
       });
+    },
+    tick: function () {
+      if (this.el.object3D) {
+	const baseTworld = this.el.object3D.matrixWorld.clone().invert();
+	if (!baseTworld.equals(baseLinkPoseInv.current)) {
+	  baseLinkPoseInv.current = baseTworld;
+	  console.debug('baseLinkPoseInv: ', baseLinkPoseInv.current.elements[0].toFixed(3), ', ',
+			baseLinkPoseInv.current.elements[1].toFixed(3), ', ',
+			baseLinkPoseInv.current.elements[2].toFixed(3));
+	  console.debug('baseLinkPoseInv: ', baseLinkPoseInv.current.elements[4].toFixed(3), ', ',
+			baseLinkPoseInv.current.elements[5].toFixed(3), ', ',
+			baseLinkPoseInv.current.elements[6].toFixed(3));
+	  console.debug('baseLinkPoseInv: ', baseLinkPoseInv.current.elements[8].toFixed(3), ', ',
+			baseLinkPoseInv.current.elements[9].toFixed(3), ', ',
+			baseLinkPoseInv.current.elements[10].toFixed(3));
+	}
+      }
     }
   });
 
   AFRAME.registerComponent('vr-controller-right', {
     schema: { type: 'string', default: '' },
     init: function () {
-      set_controller_object(this.el.object3D);
+      // set_controller_object(this.el.object3D.MatrixWorld);
       // this.el.object3D.rotation.order = Euler_order;
       // Trigger 
       this.el.addEventListener('triggerdown', () => set_trigger_on(true));
@@ -72,18 +96,20 @@ export default function registerAframeComponents(options) {
       const pose = obj.matrixWorld;
       if (this._my_init_flag) {
 	if (!pose.equals(this.lastPose)) {
-          set_controller_object(this.el.object3D);
+	  const controllerBase = baseLinkPoseInv.current.clone().multiply(pose);
+          set_controller_object(controllerBase);
 	  //
 	  // // **** debugging output ****
 	  // const position = new THREE.Vector3();
 	  // position.setFromMatrixPosition(this.el.object3D.matrixWorld);
 	  // position.applyMatrix4(three2worldMat); // convert to world coord.
-	  // console.log("controller position: " + position.x.toFixed(3)
+	  // console.debug("controller position: " + position.x.toFixed(3)
 	  // 	      + ", " + position.y.toFixed(3)
 	  // 	      + ", " + position.z.toFixed(3));
 	}
       } else {
-	set_controller_object(this.el.object3D);
+	const controllerBase = baseLinkPoseInv.current.clone().multiply(pose);
+	set_controller_object(controllerBase);
 	this._my_init_flag = true;
       }
       ++this.count;
@@ -161,15 +187,15 @@ export default function registerAframeComponents(options) {
     },
     tick: function (time, timeDelta) {
       if (workerLastJoints.current) {
-	// console.log('worker joints: ', urdf2mrJoints(workerLastJoints.current).map(v => v.toFixed(3)).join(', '));
+	// console.debug('worker joints: ', urdf2mrJoints(workerLastJoints.current).map(v => v.toFixed(3)).join(', '));
 	if (time - lastUpdate > 16) {
 	  lastUpdate = time;
 	  setThetaBody(urdf2mrJoints(workerLastJoints.current));
 	}
-	// console.log('workerLastJoints: '
-	// 	    + workerLastJoints.current[0].toFixed(3) + ', '
-	// 	    + workerLastJoints.current[1].toFixed(3) + ', '
-	// 	    + workerLastJoints.current[2].toFixed(3));
+	console.debug('workerLastJoints: '
+		      + workerLastJoints.current[0].toFixed(3) + ', '
+		      + workerLastJoints.current[1].toFixed(3) + ', '
+		      + workerLastJoints.current[2].toFixed(3));
       }
     }
   });
@@ -184,10 +210,10 @@ export default function registerAframeComponents(options) {
     },
     tick() {
       const obj = this.el.object3D;
-      if (!obj.matrixWorld) return; // not yet initialized
+      if (!obj.matrixWorld || !baseLinkPoseInv.current) return; // not yet initialized
 
-      const pose = obj.matrixWorld;
-      // console.log('end-link pose x-axis: '+
+      const pose = baseLinkPoseInv.current.clone().multiply(obj.matrixWorld);
+      // console.debug('end-link pose x-axis: '+
       // 		  pose.elements[0].toFixed(3) + ', ' +
       // 		  pose.elements[1].toFixed(3) + ', ' +
       // 		  pose.elements[2].toFixed(3) +
@@ -197,20 +223,20 @@ export default function registerAframeComponents(options) {
       // 		  pose.elements[6].toFixed(3) );
       if (this._my_init_flag) {
 	if (!pose.equals(this.lastPose)) {
-	  // console.log('end-link Moved !!');
+	  // console.debug('end-link Moved !!');
 	  endLinkPose.current.copy(pose);
 	  // // **** debugging output ****
 	  // const position = new THREE.Vector3();
 	  // position.setFromMatrixPosition(pose);
 	  // position.applyMatrix4(world2threeMat); // convert to world coord.
-	  // console.log("end link position: " + position.x.toFixed(3)
+	  // console.debug("end link position: " + position.x.toFixed(3)
 	  // 	      + ", " + position.y.toFixed(3)
 	  // 	      + ", " + position.z.toFixed(3));
-	  // console.log("end link position: " + position.x
+	  // console.debug("end link position: " + position.x
 	  // 	      + ", " + position.y + ", " + position.z);
 	  // const quat = new THREE.Quaternion();
 	  // quat.setFromRotationMatrix(pose);
-	  // console.log("end link quat: " + quat.x + ", " + quat.y
+	  // console.debug("end link quat: " + quat.x + ", " + quat.y
 	  // 	      + ", " + quat.z + ", w:" + quat.w);
 	}
       } else {

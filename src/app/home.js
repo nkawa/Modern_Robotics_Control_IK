@@ -27,8 +27,8 @@ export default function DynamicHome(props) {
   // Generate constant transformation matrices (THREE.Matrix4)
   const [three2worldMat] = React.useState(()=> three2worldMatGen());
   const [world2threeMat] = React.useState(()=> world2threeMatGen());
-  // console.log("three2worldMat: ", three2worldMat.elements);
-  // console.log("world2threeMat: ", world2threeMat.elements);
+  console.debug("three2worldMat: ", three2worldMat.elements);
+  console.debug("world2threeMat: ", world2threeMat.elements);
 
   // initilize Modern Robotics parameters
   // Load Robot Model
@@ -60,7 +60,7 @@ export default function DynamicHome(props) {
   const [button_a_on, set_button_a_on] = React.useState(false)
   const [button_b_on, set_button_b_on] = React.useState(false)
   const [controller_object, set_controller_object] = React.useState(() => {
-    const controller_object = new THREE.Object3D();
+    const controller_object = new THREE.Matrix4();
     return controller_object;
   });
 
@@ -85,8 +85,10 @@ export default function DynamicHome(props) {
   const reqIdRef = React.useRef()
   // The pose of the end link
   const endLinkPose = React.useRef(new THREE.Matrix4());
-  const endLinkPoseStart = React.useRef(new THREE.Matrix4());
-  const controllerStartInv = React.useRef(new THREE.Matrix4());
+  const endLinkPoseStart = React.useRef(null);
+  // const baseLinkPoseInv = React.useRef(new THREE.Matrix4());
+  const baseLinkPoseInv = React.useRef(null);
+  const controllerStartInv = React.useRef(null);
   // Animation loop
   const loop = (timestamp)=>{
     reqIdRef.current = window.requestAnimationFrame(loop) 
@@ -120,7 +122,7 @@ export default function DynamicHome(props) {
 	  break;
 	case 'joints':
 	  if (event.data.joints) {
-	    // console.log("Worker message received:", event.data);
+	    console.debug("Worker message received:", event.data);
 	    // Always skip to the latest data
 	    workerLastJoints.current = event.data.joints;
 	  }
@@ -169,6 +171,7 @@ export default function DynamicHome(props) {
   const [theta_body, setThetaBody] = React.useState(()=>{
     // Initial joint and tool angles
     // const theta_body_initial = [0, 0, 0, 0, 0, 0].map(x=>x*Math.PI/180);
+    // const theta_body_initial = [180, 90, 0, 90, 180, 0].map(x=>x*Math.PI/180);
     // **** piper
     // const theta_body_initial = [0, -15, 82.6, 0, 70, 0].map(x=>x*Math.PI/180);
     // **** jaka_zu_5 initial angles
@@ -263,13 +266,15 @@ export default function DynamicHome(props) {
     // 	  || workerLastJoints.current.other.hasJointValue === false) {
     //   }
     // }
-    if (rendered && vrModeRef.current && trigger_on ) {
+    if (endLinkPoseStart.current !== null &&
+	baseLinkPoseInv.current !== null &&
+	rendered && vrModeRef.current && trigger_on ) {
       // w_B^{-1}: start^-1: controllerStartInv.current
       // w_E: goal: controllerCurrentWorld
       // w_S: begin: endLinkPoseStart.current
       // w_S': 原点はB, 向きはS
       // w_G: end: to be calculated
-      const controllerCurrentWorld = three2worldMat.clone().multiply(controller_object.matrixWorld);
+      const controllerCurrentWorld = three2worldMat.clone().multiply(controller_object);
       const controllerDiff = controllerStartInv.current.clone().multiply(controllerCurrentWorld);
       const controllerTend = controllerStartInv.current.clone().multiply(endLinkPoseStart.current);
       controllerTend.extractRotation(controllerTend);
@@ -282,7 +287,7 @@ export default function DynamicHome(props) {
       const scale = new THREE.Vector3();
       controllerDiff.decompose(posDiff, quatDiff, scale);
       const quaterPosDiff = posDiff.clone().multiplyScalar(magnification);
-      // console.log('quaterPosDiff: ' + quaterPosDiff.x.toFixed(3)
+      // console.debug('quaterPosDiff: ' + quaterPosDiff.x.toFixed(3)
       // 		  + ', ' + quaterPosDiff.y.toFixed(3)
       // 		  + ', ' + quaterPosDiff.z.toFixed(3));
       const quaterQuatDiff = quatDiff.clone(); // .multiplyScalar(0.25);
@@ -296,10 +301,17 @@ export default function DynamicHome(props) {
       const scale1 = new THREE.Vector3(1, 1, 1);
       const matrixDiff = new THREE.Matrix4();
       matrixDiff.compose(quaterPosDiff, quaterQuatDiff, scale1);
+      //
+      //
       const newEndLinkPose = endLinkPoseStart.current.clone()
 	    .multiply(endTcontroller).multiply(matrixDiff)
 	    .multiply(controllerTend);
-
+      console.debug("matrixDiff: ", matrixDiff.elements[12].toFixed(3),
+      		    matrixDiff.elements[13].toFixed(3),
+      		    matrixDiff.elements[14].toFixed(3));
+      console.debug("newEndLinkPose: ", newEndLinkPose.elements[12].toFixed(3),
+      		    newEndLinkPose.elements[13].toFixed(3),
+      		    newEndLinkPose.elements[14].toFixed(3));
       // **** send to worker thread ****
       workerRef.current.postMessage({ type: 'destination',
 				      endLinkPose: newEndLinkPose.elements });
@@ -311,24 +323,24 @@ export default function DynamicHome(props) {
     }
     // Update last position and orientation
     // ** move to theta_body's useEffect **
-    if (!trigger_on ||
-	endLinkPoseStart.current.equals(new THREE.Matrix4().identity())) {
+    if (baseLinkPoseInv.current !== null &&
+	(!trigger_on || endLinkPoseStart.current === null)) {
       endLinkPoseStart.current = three2worldMat.clone()
 	.multiply(endLinkPose.current);
+      console.debug("endLinkPoseStart: ", endLinkPoseStart.current.elements[12].toFixed(3),
+		    endLinkPoseStart.current.elements[13].toFixed(3),
+		    endLinkPoseStart.current.elements[14].toFixed(3));
     }
-    if (!trigger_on ||
-	controllerStartInv.current.equals(new THREE.Matrix4().identity())) {
+    if (baseLinkPoseInv.current !== null &&
+	(!trigger_on ||	 controllerStartInv.current === null)) {
       controllerStartInv.current = three2worldMat.clone()
-	.multiply(controller_object.matrixWorld).invert();
+	.multiply(controller_object).invert();
+      console.debug("controllerStartInv: ", controllerStartInv.current.elements[12].toFixed(3),
+		    controllerStartInv.current.elements[13].toFixed(3),
+		    controllerStartInv.current.elements[14].toFixed(3));
     }
   }, [
-    controller_object.position.x,
-    controller_object.position.y,
-    controller_object.position.z,
-    controller_object.quaternion.x,
-    controller_object.quaternion.y,
-    controller_object.quaternion.z,
-    controller_object.quaternion.w,
+    ...controller_object.elements,
     rendered,
     trigger_on,
   ]);
@@ -400,6 +412,7 @@ export default function DynamicHome(props) {
       workerLastJoints,
       setThetaBody,
       endLinkPose,
+      baseLinkPoseInv,
     });
     // set rendered state after a short delay to ensure the scene is ready
     // setTimeout(() => set_rendered(true), 16.5);

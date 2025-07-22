@@ -74,9 +74,9 @@ const Model = (props) => {
       ></a-plane>
 
       {/* Robot Base */}
-      <a-entity robot-click="" gltf-model="#base" position={'0 0 0'} rotation={`0 0 0`} visible="true">
+      <a-entity robot-click="" gltf-model="#base" position={'0 0 0'} rotation={`0 -180 0`} visible="true">
         {/* J1 */}
-        <a-entity j_id="1" gltf-model="#j1" position={'0 0 0'} rotation={`0 ${theta1-0} 0`}>
+        <a-entity j_id="1" gltf-model="#j1" position={'0 0 0'} rotation={`0 ${theta1-180} 0`}>
           {/* J2 */}
           <a-entity j_id="2" gltf-model="#j2" position={`0 ${L_01} 0`} rotation={`${-theta2} 0 0`}>
             {/* J3 */}
