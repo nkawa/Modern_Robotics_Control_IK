@@ -77,6 +77,10 @@ export default function DynamicHome(props) {
 
   const [dsp_message,set_dsp_message] = React.useState("XXX")
 
+  const green_color = 'lime';
+  const red_color = 'red';
+  const dsp_color = React.useRef(green_color); // Default color for DSP message
+
   // Robot Tool
   const toolNameList = ["No tool"]
   const [toolName,set_toolName] = React.useState(toolNameList[0])
@@ -86,7 +90,6 @@ export default function DynamicHome(props) {
   // The pose of the end link
   const endLinkPose = React.useRef(new THREE.Matrix4());
   const endLinkPoseStart = React.useRef(null);
-  // const baseLinkPoseInv = React.useRef(new THREE.Matrix4());
   const baseLinkPoseInv = React.useRef(null);
   const controllerStartInv = React.useRef(null);
   // Animation loop
@@ -137,13 +140,20 @@ export default function DynamicHome(props) {
     const intervalId = setInterval(() => {
       // const statusText = 'line1'+'\n'+'line2\nline3';
       const statusText =
-	    'status: ' + workerLastStatus.current?.status + '\n' +
+	    'status: ' + workerLastStatus.current?.status +
+	    '  magnification: ' + controllerMagnificationUsed.current.toFixed(2) +
+	    '\n' +
 	    ' cond:' + workerLastStatus.current?.condition_number.toFixed(2) +
 	    '  manip:'  + workerLastStatus.current?.manipulability.toFixed(3) +
 	    '  k:'  + workerLastStatus.current?.sensitivity_scale.toFixed(3) +
 	    + ' ' + '\n' +
 	    '  limit flags: ' + (workerLastStatus.current?.limit_flag || []).join(', ');
       set_dsp_message(statusText);
+      if (workerLastStatus.current?.sensitivity_scale > 0.001) {
+	dsp_color.current = red_color; // Red color for high sensitivity
+      } else {
+	dsp_color.current = green_color; // Green color for normal sensitivity
+      }
     }, 200); // Update every 200ms
     //
     return () => {
@@ -257,7 +267,10 @@ export default function DynamicHome(props) {
   //   }
   // }
 
-
+  
+  const controllerMagnification = React.useRef(0.5);
+  const controllerMagnificationPrev = React.useRef(controllerMagnification.current);
+  const controllerMagnificationUsed = React.useRef(controllerMagnification.current);
   React.useEffect(() => {
     // VR input period
     // const dt = 16.5/1000;
@@ -269,11 +282,11 @@ export default function DynamicHome(props) {
     if (endLinkPoseStart.current !== null &&
 	baseLinkPoseInv.current !== null &&
 	rendered && vrModeRef.current && trigger_on ) {
-      // w_B^{-1}: start^-1: controllerStartInv.current
-      // w_E: goal: controllerCurrentWorld
-      // w_S: begin: endLinkPoseStart.current
-      // w_S': 原点はB, 向きはS
-      // w_G: end: to be calculated
+      // base_B^{-1}: start^-1: controllerStartInv.current
+      // base_E: goal: controllerCurrentWorld
+      // base_S: begin: endLinkPoseStart.current
+      // base_S': 原点はB, 向きはS
+      // base_G: end: to be calculated
       const controllerCurrentWorld = three2worldMat.clone().multiply(controller_object);
       const controllerDiff = controllerStartInv.current.clone().multiply(controllerCurrentWorld);
       const controllerTend = controllerStartInv.current.clone().multiply(endLinkPoseStart.current);
@@ -281,7 +294,7 @@ export default function DynamicHome(props) {
       const endTcontroller = controllerTend.clone().transpose();
       //
       // reduce controller movement by 0.25 -- 1.00
-      const magnification = 0.60;
+      const magnification = controllerMagnificationUsed.current;
       const posDiff = new THREE.Vector3();
       const quatDiff = new THREE.Quaternion();
       const scale = new THREE.Vector3();
@@ -323,22 +336,28 @@ export default function DynamicHome(props) {
     }
     // Update last position and orientation
     // ** move to theta_body's useEffect **
-    if (baseLinkPoseInv.current !== null &&
-	(!trigger_on || endLinkPoseStart.current === null)) {
-      endLinkPoseStart.current = three2worldMat.clone()
-	.multiply(endLinkPose.current);
-      console.debug("endLinkPoseStart: ", endLinkPoseStart.current.elements[12].toFixed(3),
-		    endLinkPoseStart.current.elements[13].toFixed(3),
-		    endLinkPoseStart.current.elements[14].toFixed(3));
+    let updateStartPose = false;
+    if (baseLinkPoseInv.current !== null) {
+      if (!trigger_on) {
+	updateStartPose = true;
+	controllerMagnificationUsed.current = controllerMagnification.current;
+      }
+      if (updateStartPose || endLinkPoseStart.current === null) {
+        endLinkPoseStart.current = three2worldMat.clone()
+	  .multiply(endLinkPose.current);
+        console.debug("endLinkPoseStart: ", endLinkPoseStart.current.elements[12].toFixed(3),
+		      endLinkPoseStart.current.elements[13].toFixed(3),
+		      endLinkPoseStart.current.elements[14].toFixed(3));
+      }
+      if (updateStartPose || controllerStartInv.current === null) {
+        controllerStartInv.current = three2worldMat.clone()
+	  .multiply(controller_object).invert();
+        console.debug("controllerStartInv: ", controllerStartInv.current.elements[12].toFixed(3),
+		      controllerStartInv.current.elements[13].toFixed(3),
+		      controllerStartInv.current.elements[14].toFixed(3));
+      }
     }
-    if (baseLinkPoseInv.current !== null &&
-	(!trigger_on ||	 controllerStartInv.current === null)) {
-      controllerStartInv.current = three2worldMat.clone()
-	.multiply(controller_object).invert();
-      console.debug("controllerStartInv: ", controllerStartInv.current.elements[12].toFixed(3),
-		    controllerStartInv.current.elements[13].toFixed(3),
-		    controllerStartInv.current.elements[14].toFixed(3));
-    }
+    controllerMagnificationPrev.current = controllerMagnification.current;
   }, [
     ...controller_object.elements,
     rendered,
@@ -413,6 +432,8 @@ export default function DynamicHome(props) {
       setThetaBody,
       endLinkPose,
       baseLinkPoseInv,
+      controllerMagnification,
+      controllerStartInv,
     });
     // set rendered state after a short delay to ensure the scene is ready
     // setTimeout(() => set_rendered(true), 16.5);
@@ -497,6 +518,7 @@ export default function DynamicHome(props) {
       robotProps={robotProps}
       controllerProps={controllerProps}
       dsp_message={dsp_message}
+      dsp_color={dsp_color.current}
       c_pos_x={c_pos_x}
       c_pos_y={c_pos_y}
       c_pos_z={c_pos_z}

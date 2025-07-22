@@ -20,7 +20,7 @@ export default function RobotScene(props) {
   const {
     robot_model, rendered, target_error, robotProps, controllerProps,
     theta_tool,
-    dsp_message,
+    dsp_message, dsp_color,
     c_pos_x, c_pos_y, c_pos_z, c_deg_x, c_deg_y, c_deg_z, 
     // position_ee, euler_ee, 
     // vr_controller_pos, vr_controller_euler,
@@ -60,8 +60,8 @@ export default function RobotScene(props) {
           {/* Camera */}
           <a-camera id="camera" cursor="rayOrigin: mouse;" position="0 0 0">
             <a-entity
-              text={`value: ${dsp_message}; color: yellow; backgroundColor: rgb(31, 219, 131); border: #000000; whiteSpace: pre`}
-              position="0 0.7 -1.4"
+              text={`value: ${dsp_message}; color: ${dsp_color}; backgroundColor: rgb(31, 219, 131); border: #000000; whiteSpace: pre`}
+              position="0 0.35 -1.4"
             />
           </a-camera>
         </a-entity>

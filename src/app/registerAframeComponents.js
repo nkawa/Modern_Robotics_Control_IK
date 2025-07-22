@@ -28,6 +28,8 @@ export default function registerAframeComponents(options) {
     setThetaBody,
     endLinkPose,
     baseLinkPoseInv,
+    controllerMagnification,
+    controllerStartInv,
   } = options;
   
   AFRAME.registerComponent('robot-click', {
@@ -81,16 +83,28 @@ export default function registerAframeComponents(options) {
       this.el.addEventListener('bbuttondown', () => set_button_b_on(true));
       this.el.addEventListener('bbuttonup', () => set_button_b_on(false));
 
-      // this.el.addEventListener('thumbstickmoved', this.logThumbstick);
+      this.el.addEventListener('thumbstickmoved', this.logThumbstick);
       this.lastPose = new THREE.Matrix4();
       this.count = 0;
+      this.detail_y_prev = 0;
     },
     logThumbstick: function (evt) {
       // thumbStickInfo.current = evt.detail;
-      if (evt.detail.y > 0.35) { console.log("DOWN", evt.detail.y); }
+      if (evt.detail.y < 0.5 &&
+	  this.detail_y_prev >= 0.5) {
+	controllerMagnification.current *= 1.41421356237; // sqrt(2)
+	if (controllerMagnification.current > 1) controllerMagnification.current = 1;
+	console.debug("MAGNIFICATION UP", controllerMagnification.current);
+      }
+      if (evt.detail.y < -0.35 &&
+	  this.detail_y_prev >= -0.35) {
+	controllerMagnification.current *= 0.70710678118; // 1/sqrt(2)
+	console.debug("MAGNIFICATION RESET", controllerMagnification.current);
+      }
       if (evt.detail.y < -0.35) { console.log("UP", evt.detail.y); }
       if (evt.detail.x < -0.35) { console.log("LEFT", evt.detail.x); }
       if (evt.detail.x > 0.35) { console.log("RIGHT", evt.detail.x); }
+      this.detail_y_prev = evt.detail.y;
     },
     tick: function () {
       const obj = this.el.object3D;
