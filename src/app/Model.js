@@ -56,7 +56,7 @@ const rad2deg = rad => rad * 180 / Math.PI;
 
 // Jaka_ZU_5 Robot Params
 const Model = (props) => {
-  const { theta_body = [0,0,0,0,0,0], theta_tool = 24 } = props;
+  const { theta_body = [0,0,0,0,0,0], theta_tool = 24 ,controllerQuat} = props;
   const [theta1, theta2, theta3, theta4, theta5, theta6] = theta_body.map(rad2deg);
   const L_01 = 0.12015, L_23 = 0.43, L_34 = 0.3685, W_45 = 0.114, L_56 = 0.1135, L_ee = -0.0065
 
@@ -72,6 +72,20 @@ const Model = (props) => {
         opacity="0.0"
         visible="False"
       ></a-plane>
+
+      <a-entity axes1 position={'0 1 0'} >
+        <a-sphere 
+          scale="0.012 0.012 0.012" 
+          color="white"
+          visible={true}>
+        </a-sphere>
+        <a-cylinder position="0.05      0  0" rotation="0 0  -90 "
+                    height="0.10" radius="0.0035" color="red" /> 
+        <a-cylinder position="0 0.05      0" rotation="0  0 0"
+                    height="0.10" radius="0.0035" material="color: #00ff00" />
+        <a-cylinder position="0      0.0  0.05" rotation="90  0 0 "
+                    height="0.10" radius="0.0035" color="blue" />
+      </a-entity>
 
       {/* Robot Base */}
       <a-entity robot-click="" gltf-model="#base" position={'0 0 0'} rotation={`0 -180 0`} visible="true">
@@ -98,12 +112,12 @@ const Model = (props) => {
                         color="yellow"
                         visible={true}>
                       </a-sphere>
-                      <a-cylinder position="0      0 -0.015" rotation="90 0  0 "
-                                  height="0.0250" radius="0.0015" color="red" /> 
-                      <a-cylinder position="-0.015 0      0" rotation="0  0 90"
-                                  height="0.0250" radius="0.0015" material="color: #00ff00" />
-                      <a-cylinder position="0      0.025  0" rotation="0  90 0 "
-                                  height="0.0550" radius="0.0015" color="blue" />
+                      <a-cylinder position="0.035      0  0" rotation="0 0  -90 "
+                                  height="0.070" radius="0.0035" color="red" /> 
+                      <a-cylinder position="0 0.035      0" rotation="0  0 0"
+                                  height="0.0700" radius="0.0035" material="color: #00ff00" />
+                      <a-cylinder position="0      0.0  0.035" rotation="90  0 0 "
+                                  height="0.070" radius="0.0035" color="blue" />
                     </a-entity>
                       {/* <a-entity gltf-model="#j6_1" position={`${finger_pos} 0 ${L_56+L_ee}`}></a-entity>
                       <a-entity gltf-model="#j6_2" position={`${-finger_pos} 0 ${L_56+L_ee}`}></a-entity> */}

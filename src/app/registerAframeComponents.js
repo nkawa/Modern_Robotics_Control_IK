@@ -2,6 +2,8 @@ import {urdf2mrJoints} from './constTransformGen'
 let registered = false;
 let lastUpdate = 0;
 
+let controllerCoord = new THREE.Object3D();
+
 export default function registerAframeComponents(options) {
   // const three2worldMat = three2worldMatGen();
   // const world2threeMat = world2threeMatGen();
@@ -93,6 +95,7 @@ export default function registerAframeComponents(options) {
     tick: function () {
       const obj = this.el.object3D;
       if (!obj.matrixWorld) return; // not yet initialized
+      controllerCoord = obj;
       const pose = obj.matrixWorld;
       if (this._my_init_flag) {
 	if (!pose.equals(this.lastPose)) {
@@ -199,6 +202,16 @@ export default function registerAframeComponents(options) {
       }
     }
   });
+
+  AFRAME.registerComponent('axes1', {
+    init() {
+    },
+    tick() {
+      this.el.object3D.position.copy(controllerCoord.position);
+      this.el.object3D.quaternion.copy(controllerCoord.quaternion);
+    }
+  });
+
   // ****************
   // Dedicated component for "end-link"
   // this monitors the end-link pose and sets the useRef variable
