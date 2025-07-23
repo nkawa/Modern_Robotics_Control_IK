@@ -34,6 +34,7 @@ export default function DynamicHome(props) {
   // Load Robot Model
 //  const [robot_model] = React.useState("agilex_piper"); // Change this to your robot model
   const [robot_model] = React.useState("jaka_zu_5"); // Change this to your robot model
+  const [toolLimit] = React.useState({ min: -1, max: 89 });
   // const [rk] = React.useState(()=> new RobotDynamcis(robot_model));
   // const [jointLimits] = React.useState(rk.jointLimits);
   // const [toolLimit] = React.useState(rk.toolLimit);
