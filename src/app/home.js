@@ -52,7 +52,6 @@ export default function DynamicHome(props) {
   const robotNameList = ["Model"]
   const [robotName,set_robotName] = React.useState(robotNameList[0])
 
-  const [target_error,set_target_error] = React.useState(false)
 
   const vrModeRef = React.useRef(false); 
   const [trigger_on,set_trigger_on] = React.useState(false)
@@ -150,9 +149,11 @@ export default function DynamicHome(props) {
 	    '  limit flags: ' + (workerLastStatus.current?.limit_flag || []).join(', ');
       set_dsp_message(statusText);
       if (workerLastStatus.current?.sensitivity_scale > 0.001) {
-	dsp_color.current = red_color; // Red color for high sensitivity
+	dsp_color.current = 'orange'; // Orange color for singularity warning
+      } else if (workerLastStatus.current?.limit_flag.map(x=>x*x).reduce((sum,x)=>sum+x,0) > 0) {
+	dsp_color.current = red_color; // Red color for touching the joint limits
       } else {
-	dsp_color.current = green_color; // Green color for normal sensitivity
+	dsp_color.current = green_color; // Green color for normal status
       }
     }, 200); // Update every 200ms
     //
@@ -198,87 +199,11 @@ export default function DynamicHome(props) {
   // Theta guess for Newton's method in inverse kinematics
   const [theta_body_guess, setThetaBodyGuess] = React.useState(theta_body);
 
-
-  // const [pose_ee, setPoseEE] = React.useState(() => {
-  //   // Foward Kinematics solution
-  //   const T0 = mr.FKinBody(M, Blist, theta_body);
-  //   const [R0, p0] = mr.TransToRp(T0);
-  //   // Position and orientation (rotation matrix) of end effector
-  //   const pose_ee_initial = {
-  //     position: p0,
-  //     // orientation: R0
-  //     euler: mr.RotMatToEuler(R0, Euler_order)
-  //   };
-  //   return pose_ee_initial;});
-  // const [pose_ee_Three, setPoseEEThree] = React.useState(() => {
-  //   const pose_ee_Three_initial = {
-  //     position: mr.worlr2three(pose_ee.position),
-  //     euler: mr.worlr2three(pose_ee.euler),
-  //   };
-  //   return pose_ee_Three_initial;});
-
-  // // Update end effector position and orientation (for webcontroller)
-  // React.useEffect(() => {
-  //   const T = mr.FKinBody(M, Blist, theta_body);
-  //   const [R, p] = mr.TransToRp(T);
-  //   const euler = mr.RotMatToEuler(R, Euler_order);
-  //   setPoseEE({position: p, euler: euler}); // Update to ZYX Euler angles
-  //   setPoseEEThree({
-  //     position: mr.worlr2three(pose_ee.position),
-  //     euler: mr.worlr2three(pose_ee.euler),
-  //   });
-  //   }, [...theta_body]);
-  
-  /**
-   *  Control Methods
-   * /
-   * 
-  /** Kinamatics Control **/
-  // function KinematicsControl(tf) {
-  //   const T_sd = [
-  //     [tf.elements[0], tf.elements[4], tf.elements[8], tf.elements[12]],
-  //     [tf.elements[1], tf.elements[5], tf.elements[9], tf.elements[13]],
-  //     [tf.elements[2], tf.elements[6], tf.elements[10], tf.elements[14]],
-  //     [0, 0, 0, 1]];
-  //   KinamaticsControlAux(T_sd);
-  // }
-  // function KinamaticsControl(newPos, newEuler) {
-  //   const T_sd = mr.RpToTrans(mr.EulerToRotMat(newEuler, Euler_order), newPos);
-  //   KinamaticsControlAux(T_sd);
-  // }
-  // function KinamaticsControlAux(T_sd)
-  // {
-  //   const [thetalist_sol, ik_success] = mr.IKinBody(Blist, M, T_sd, theta_body_guess, 1e-5, 1e-5);
-
-  //   if (ik_success) {
-  //     const thetalist_sol_limited = thetalist_sol.map((theta, i) =>
-  //     Math.max(jointLimits[i].min, Math.min(jointLimits[i].max, theta))
-  //     );
-  //     // const theta_tmp = theta_body.map(x => x); // copy theta_body
-  //     // theta_tmp[4] = theta_tmp[4] + 3.14159/180; // add 0.1 degree to theta_5
-  //     // theta_tmp[0] = theta_tmp[0] + 3.14159/180; // add 0.1 degree to theta_5
-  //     // setThetaBody(theta_tmp);
-  //     setThetaBody(thetalist_sol_limited);
-  //     setThetaBodyGuess(thetalist_sol_limited);
-  //     set_target_error(false);
-  //   } else {
-  //     console.warn("IK failed to converge");
-  //     set_target_error(true);
-  //   }
-  // }
-
-  
   const controllerMagnification = React.useRef(0.5);
   const controllerMagnificationPrev = React.useRef(controllerMagnification.current);
   const controllerMagnificationUsed = React.useRef(controllerMagnification.current);
   React.useEffect(() => {
     // VR input period
-    // const dt = 16.5/1000;
-    // if (rendered && vrModeRef.current && workerRef.current) {
-    //   if (workerLastJoints.current === null
-    // 	  || workerLastJoints.current.other.hasJointValue === false) {
-    //   }
-    // }
     if (endLinkPoseStart.current !== null &&
 	baseLinkPoseInv.current !== null &&
 	rendered && vrModeRef.current && trigger_on ) {
@@ -328,7 +253,6 @@ export default function DynamicHome(props) {
       // **** send to worker thread ****
       workerRef.current.postMessage({ type: 'destination',
 				      endLinkPose: newEndLinkPose.elements });
-      // KinamaticsControl(newPos, newEuler);
       // KinematicsControl(newEndLinkPose);
       // if (workerLastJoints.current) {
       // 	setThetaBody(urdf2mrJoints(workerLastJoints.current));
@@ -358,11 +282,7 @@ export default function DynamicHome(props) {
       }
     }
     controllerMagnificationPrev.current = controllerMagnification.current;
-  }, [
-    ...controller_object.elements,
-    rendered,
-    trigger_on,
-  ]);
+  }, [...controller_object.elements, rendered, trigger_on ]);
 
   // Gripper Control 
   function clampTool(value) {
@@ -514,7 +434,6 @@ export default function DynamicHome(props) {
     <RobotScene
       robot_model={robot_model}
       rendered={rendered}
-      target_error={target_error}
       robotProps={robotProps}
       controllerProps={controllerProps}
       dsp_message={dsp_message}

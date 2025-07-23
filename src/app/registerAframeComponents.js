@@ -3,6 +3,8 @@ let registered = false;
 let lastUpdate = 0;
 
 let controllerCoord = new THREE.Object3D();
+let controllerPosition = new THREE.Vector3();
+let endLinkOrientatoin = new THREE.Quaternion();
 
 export default function registerAframeComponents(options) {
   // const three2worldMat = three2worldMatGen();
@@ -110,6 +112,7 @@ export default function registerAframeComponents(options) {
       const obj = this.el.object3D;
       if (!obj.matrixWorld) return; // not yet initialized
       controllerCoord = obj;
+      obj.getWorldPosition(controllerPosition);
       const pose = obj.matrixWorld;
       if (this._my_init_flag) {
 	if (!pose.equals(this.lastPose)) {
@@ -221,8 +224,8 @@ export default function registerAframeComponents(options) {
     init() {
     },
     tick() {
-      this.el.object3D.position.copy(controllerCoord.position);
-      this.el.object3D.quaternion.copy(controllerCoord.quaternion);
+      this.el.object3D.position.copy(controllerPosition);
+      this.el.object3D.quaternion.copy(endLinkOrientatoin);
     }
   });
 
@@ -238,7 +241,7 @@ export default function registerAframeComponents(options) {
     tick() {
       const obj = this.el.object3D;
       if (!obj.matrixWorld || !baseLinkPoseInv.current) return; // not yet initialized
-
+      obj.getWorldQuaternion(endLinkOrientatoin);
       const pose = baseLinkPoseInv.current.clone().multiply(obj.matrixWorld);
       // console.debug('end-link pose x-axis: '+
       // 		  pose.elements[0].toFixed(3) + ', ' +
