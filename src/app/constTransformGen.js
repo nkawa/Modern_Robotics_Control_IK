@@ -47,14 +47,29 @@ export function mr2urdfJoints(mrJoints) {
 }
 // In the Jaka robot, the joint angles 0...0 of the ModernRobotics system
 // are the joint angles 180,90,0,90,180 of the URDF
-export function urdf2mrJoints(udJoints) {
-  const mr = [
-    udJoints[0],
-    udJoints[1] - deg90,
-    udJoints[2],
-    udJoints[3] - deg90,
-    udJoints[4],
-    udJoints[5] - deg90
-  ];
-  return mr;
-}
+// export function urdf2mrJoints(udJoints) {
+//   const mr = [
+//     udJoints[0],
+//     udJoints[1] - deg90,
+//     udJoints[2],
+//     udJoints[3] - deg90,
+//     udJoints[4],
+//     udJoints[5] - deg90
+//   ];
+//   return mr;
+// }
+// for Piper
+// const j2UrdfZero = 1.46984632679; // Pi/2.0 - 0.10095
+// const j3UrdfZero = -2.95319327649; // - (Pi/2 - 0.10095) - Pi/2 + ArcTan[0.25075,0.021984]
+// export function mr2urdfJoints(mrJoints) {
+//   const ud = [...mrJoints];
+//   ud[1] += j2UrdfZero; // J2のオフセット
+//   ud[2] += j3UrdfZero; // J3のオフセット
+//   return ud;
+// }
+// export function urdf2mrJoints(udJoints) {
+//   const mr = [...udJoints];
+//   mr[1] -= j2UrdfZero; // J2のオフセット
+//   mr[2] -= j3UrdfZero; // J3のオフセット
+//   return mr;
+// }

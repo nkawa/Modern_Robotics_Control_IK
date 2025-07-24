@@ -137,7 +137,7 @@ self.onmessage = function(event) {
 	cmdVelGen.setAngularGain(20.0); // 20 s^-1
 	cmdVelGen.setLinearGain(20.0); // 20 s^-1
 	const jointVelocityLimit
-	  = makeDoubleVector(Array(revolutes.length).fill(Math.PI*20)); // 20Pi rad/s
+	  = makeDoubleVector(Array(revolutes.length).fill(Math.PI*2.0)); // 2.0Pi/s // 20Pi rad/s
 	cmdVelGen.setJointVelocityLimit(jointVelocityLimit); // ジョイント速度制限を設定
 	jointVelocityLimit.delete();
 	// なにかの加減でオブジェクト生成に失敗した場合はここでエラーがthrownされる

@@ -1,10 +1,9 @@
-import {urdf2mrJoints} from './constTransformGen'
 let registered = false;
 let lastUpdate = 0;
 
 let controllerCoord = new THREE.Object3D();
 let controllerPosition = new THREE.Vector3();
-let endLinkOrientatoin = new THREE.Quaternion();
+let endLinkOrientation = new THREE.Quaternion();
 
 export default function registerAframeComponents(options) {
   // const three2worldMat = three2worldMatGen();
@@ -207,10 +206,9 @@ export default function registerAframeComponents(options) {
     },
     tick: function (time, timeDelta) {
       if (workerLastJoints.current) {
-	// console.debug('worker joints: ', urdf2mrJoints(workerLastJoints.current).map(v => v.toFixed(3)).join(', '));
 	if (time - lastUpdate > 16) {
 	  lastUpdate = time;
-	  setThetaBody(urdf2mrJoints(workerLastJoints.current));
+	  setThetaBody(workerLastJoints.current);
 	}
 	console.debug('workerLastJoints: '
 		      + workerLastJoints.current[0].toFixed(3) + ', '
@@ -225,7 +223,7 @@ export default function registerAframeComponents(options) {
     },
     tick() {
       this.el.object3D.position.copy(controllerPosition);
-      this.el.object3D.quaternion.copy(endLinkOrientatoin);
+      this.el.object3D.quaternion.copy(endLinkOrientation);
     }
   });
 
@@ -241,7 +239,7 @@ export default function registerAframeComponents(options) {
     tick() {
       const obj = this.el.object3D;
       if (!obj.matrixWorld || !baseLinkPoseInv.current) return; // not yet initialized
-      obj.getWorldQuaternion(endLinkOrientatoin);
+      obj.getWorldQuaternion(endLinkOrientation);
       const pose = baseLinkPoseInv.current.clone().multiply(obj.matrixWorld);
       // console.debug('end-link pose x-axis: '+
       // 		  pose.elements[0].toFixed(3) + ', ' +

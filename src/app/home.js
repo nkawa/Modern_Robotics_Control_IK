@@ -6,9 +6,7 @@ import RobotScene from './RobotScene';
 import registerAframeComponents from './registerAframeComponents'; 
 import useMqtt from './useMqtt';
 import { mqttclient,idtopic, publishMQTT, codeType } from '../lib/MetaworkMQTT'
-import { three2worldMatGen, world2threeMatGen,
-	   mr2urdfJoints, urdf2mrJoints
-       } from './constTransformGen';
+import { three2worldMatGen, world2threeMatGen } from './constTransformGen';
 
 // const mr = require('../modern_robotics/modern_robotics_core.js');
 // // const RobotKinematics = require('../modern_robotics/modern_robotics_Kinematics.js');
@@ -30,28 +28,15 @@ export default function DynamicHome(props) {
   console.debug("three2worldMat: ", three2worldMat.elements);
   console.debug("world2threeMat: ", world2threeMat.elements);
 
-  // initilize Modern Robotics parameters
-  // Load Robot Model
-//  const [robot_model] = React.useState("agilex_piper"); // Change this to your robot model
-  const [robot_model] = React.useState("jaka_zu_5"); // Change this to your robot model
-  const [toolLimit] = React.useState({ min: -1, max: 89 });
-  // const [rk] = React.useState(()=> new RobotDynamcis(robot_model));
-  // const [jointLimits] = React.useState(rk.jointLimits);
-  // const [toolLimit] = React.useState(rk.toolLimit);
-  // const [M] = React.useState(rk.get_M());
-  // const [Blist] = React.useState(()=>{
-  //   // const Mlist = rk.get_Mlist();
-  //   // const Glist = rk.get_Glist();
-  //   // const Kplist = rk.get_Kplist(); 
-  //   // const Kilist = rk.get_Kilist(); 
-  //   // const Kdlist = rk.get_Kdlist(); 
-  //   const Slist = rk.get_Slist();
-  //   return mr.SlistToBlist(M, Slist);}); // Convert Slist to Blist
-
   const [now, setNow] = React.useState(new Date())
   const [rendered,set_rendered] = React.useState(false)
-  const robotNameList = ["Model"]
+  const robotNameList = ["jaka_zu_5", "agilex_piper"]
   const [robotName,set_robotName] = React.useState(robotNameList[0])
+
+  // initilize Modern Robotics parameters
+  // Load Robot Model
+  const [robot_model] = React.useState(robotName); // Change this to your robot model
+  const [toolLimit] = React.useState({ min: -1, max: 89 });
 
 
   const vrModeRef = React.useRef(false); 
@@ -120,8 +105,11 @@ export default function DynamicHome(props) {
 	  break;
 	case 'generator_ready':
 	  workerRef.current
+	    .postMessage({ type: 'set_exact_solution',
+			   exactSolution: false });
+	  workerRef.current
 	    .postMessage({ type: 'set_initial_joints',
-			   joints: mr2urdfJoints(theta_body)});
+			   joints: theta_body});
 	  break;
 	case 'joints':
 	  if (event.data.joints) {
@@ -191,14 +179,26 @@ export default function DynamicHome(props) {
     // const theta_body_initial = [180, -90, 0, -90, 0, 0].map(x=>x*Math.PI/180);
     // // jaka_zu_5 near urdf ZERO
     // const theta_body_initial = [180, -60, -30, -70, 30, 0].map(x=>x*Math.PI/180);
-    const theta_body_initial = [0,20,90,-20,-90,0].map(x=>x*Math.PI/180);
-    return theta_body_initial});
+    const j2UrdfZero = 1.46984632679; // Pi/2.0 - 0.10095
+    const j3UrdfZero = -2.95319327649; // - (Pi/2 - 0.10095) - Pi/2 + ArcTan[0.25075,0.021984]
+    function piperMr2urdf(udJoints) {
+      const mr = [...udJoints];
+      mr[1] += j2UrdfZero;
+      mr[2] += j3UrdfZero;
+      return mr;
+    }
+    const theta_body_initial_map = {
+      'jaka_zu_5': [0,110,90,70,-90,90].map(x=>x*Math.PI/180),
+      'agilex_piper': piperMr2urdf([0, -15, 82.6, 0, 70, 0].map(x=>x*Math.PI/180)),
+    };
+    return theta_body_initial_map[robot_model] || [0, 0, 0, 0, 0, 0].map(x=>x*Math.PI/180);
+  });
   const [theta_tool, setThetaTool] = React.useState(()=>{
     const theta_tool_inital = 0;
     return theta_tool_inital});
 
   // Theta guess for Newton's method in inverse kinematics
-  const [theta_body_guess, setThetaBodyGuess] = React.useState(theta_body);
+  // const [theta_body_guess, setThetaBodyGuess] = React.useState(theta_body);
 
   const controllerMagnification = React.useRef(1.0);
   const controllerMagnificationPrev = React.useRef(controllerMagnification.current);
@@ -256,7 +256,7 @@ export default function DynamicHome(props) {
 				      endLinkPose: newEndLinkPose.elements });
       // KinematicsControl(newEndLinkPose);
       // if (workerLastJoints.current) {
-      // 	setThetaBody(urdf2mrJoints(workerLastJoints.current));
+      // 	setThetaBody(workerLastJoints.current);
       // }
     }
     // Update last position and orientation
