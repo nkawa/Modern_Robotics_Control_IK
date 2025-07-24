@@ -65,34 +65,31 @@ const Model = (props) => {
                         color="yellow"
                         visible={true}>
                       </a-sphere>
-                      {/*
                       <a-cylinder position="0.035      0  0" rotation="0 0  -90 "
                                   height="0.070" radius="0.0035" color="red" /> 
                       <a-cylinder position="0 0.035      0" rotation="0  0 0"
                                   height="0.0700" radius="0.0035" material="color: #00ff00" />
                       <a-cylinder position="0      0.0  0.035" rotation="90  0 0 "
                                   height="0.070" radius="0.0035" color="blue" />
-                       */}
                     </a-entity>
                     {/* Tool */}
                     <a-entity gltf-model="#j6_1" position='0.01 0 0.15' rotation='0 180 0'> 
-                      <a-entity position={`0 0 0`} rotation={`0 0 0`}>
-                        <a-cylinder position="0.035      0  0" rotation="0 0  -90 "
-                                    height="0.070" radius="0.0035" color="red" /> 
-                        <a-cylinder position="0 0.035      0" rotation="0  0 0"
-                                    height="0.0700" radius="0.0035" material="color: #00ff00" />
-                        <a-cylinder position="0      0.0  0.035" rotation="90  0 0 "
-                                    height="0.070" radius="0.0035" color="blue" />
-                      </a-entity>
-
+                      {/* <a-entity position={`0 0 0`} rotation={`0 0 0`}> */}
+                      {/*   <a-cylinder position="0.035      0  0" rotation="0 0  -90 " */}
+                      {/*               height="0.070" radius="0.0035" color="red" />  */}
+                      {/*   <a-cylinder position="0 0.035      0" rotation="0  0 0" */}
+                      {/*               height="0.0700" radius="0.0035" material="color: #00ff00" /> */}
+                      {/*   <a-cylinder position="0      0.0  0.035" rotation="90  0 0 " */}
+                      {/*               height="0.070" radius="0.0035" color="blue" /> */}
+                      {/* </a-entity> */}
                       <a-entity gltf-model='#j6_2a' position='-0.02 0 -0.06' rotation={`0 ${thetaF2a}  0` }>
-                        <a-entity gltf-model='#j6_4a' position='0.0 0 0.06' rotation={`180 ${thetaF3a}  0` }>
+                        <a-entity gltf-model='#j6_4a' position='0.0 0 0.055' rotation={`180 ${thetaF3a}  0` }>
                           <a-entity gltf-model='#j6_3b' position='-0.0 0 -0.02' rotation={`0 180 -90` }>
                         </a-entity>
                         </a-entity>
                       </a-entity>
                       <a-entity gltf-model='#j6_2b' position='0.04 0 -0.06' rotation={`0 ${thetaF2b} 0` }>
-                        <a-entity gltf-model='#j6_4b' position='-0.0 0 0.06' rotation={`0 ${thetaF3b} 0` }>
+                        <a-entity gltf-model='#j6_4b' position='-0.0 0 0.055' rotation={`0 ${thetaF3b} 0` }>
                           <a-entity gltf-model='#j6_3b' position='-0.0 0 -0.02' rotation={`0 180 -90` }>
                           </a-entity>
                         </a-entity>

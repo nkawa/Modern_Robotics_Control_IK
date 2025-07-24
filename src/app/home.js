@@ -200,7 +200,7 @@ export default function DynamicHome(props) {
   // Theta guess for Newton's method in inverse kinematics
   const [theta_body_guess, setThetaBodyGuess] = React.useState(theta_body);
 
-  const controllerMagnification = React.useRef(0.5);
+  const controllerMagnification = React.useRef(1.0);
   const controllerMagnificationPrev = React.useRef(controllerMagnification.current);
   const controllerMagnificationUsed = React.useRef(controllerMagnification.current);
   React.useEffect(() => {

@@ -28,13 +28,14 @@ const Assets = ({robot_model})=>{
       <a-asset-items id="j4" src={`/${robot_model}/JAKA_Zu_5_J4.gltf`} ></a-asset-items>
       <a-asset-items id="j5" src={`/${robot_model}/JAKA_Zu_5_J5.gltf`} ></a-asset-items>
       <a-asset-items id="j6" src={`/${robot_model}/JAKA_Zu_5_J6.gltf`} ></a-asset-items>
-      <a-asset-items id="j6_1" src={`/${robot_model}/AG-160-95-body.gltf`} ></a-asset-items>
-      <a-asset-items id="j6_2a" src={`/${robot_model}/AG-160-95-2a.gltf`} ></a-asset-items>
-      <a-asset-items id="j6_2b" src={`/${robot_model}/AG-160-95-2b.gltf`} ></a-asset-items>
-      <a-asset-items id="j6_3a" src={`/${robot_model}/AG-160-95-3a.gltf`} ></a-asset-items>
-      <a-asset-items id="j6_3b" src={`/${robot_model}/AG-160-95-3b.gltf`} ></a-asset-items>
-      <a-asset-items id="j6_4a" src={`/${robot_model}/AG-160-95-4a.gltf`} ></a-asset-items>
-      <a-asset-items id="j6_4b" src={`/${robot_model}/AG-160-95-4b.gltf`} ></a-asset-items>
+      {/* */}
+      <a-asset-items id="j6_1" src={`/${robot_model}/AG-160-95-body.glb`} ></a-asset-items>
+      <a-asset-items id="j6_2a" src={`/${robot_model}/AG-160-95-2a.glb`} ></a-asset-items>
+      <a-asset-items id="j6_2b" src={`/${robot_model}/AG-160-95-2b.glb`} ></a-asset-items>
+      <a-asset-items id="j6_3a" src={`/${robot_model}/AG-160-95-3a.glb`} ></a-asset-items>
+      <a-asset-items id="j6_3b" src={`/${robot_model}/AG-160-95-3b.glb`} ></a-asset-items>
+      <a-asset-items id="j6_4a" src={`/${robot_model}/AG-160-95-4a.glb`} ></a-asset-items>
+      <a-asset-items id="j6_4b" src={`/${robot_model}/AG-160-95-4b.glb`} ></a-asset-items>
     </a-assets>
     )
   }
