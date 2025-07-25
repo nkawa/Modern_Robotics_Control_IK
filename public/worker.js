@@ -2,6 +2,8 @@
 // Worker script for handling messages and performing calculations
 // import * as THREE from 'three' // THREE.jsを使わなければNext.jsやViteでのビルドが不要
 // worker state definition
+import {TrapVelocGenerator} from './TrapVelocGenerator.js'
+
 const st = Object.freeze({
   initializing: 1,
   waitingRobotType: 2,
@@ -9,7 +11,14 @@ const st = Object.freeze({
   generatorReady: 4,
   slrmReady: 5,
 })
+const sst = Object.freeze({
+  dormant: 1,
+  converged: 2,
+  moving: 3,
+  rewinding: 4,
+})
 let workerState = st.initializing; // worker state
+let subState = sst.dormant;  // slrm & jointRewinder state
 console.log('Now intended to import ModuleFactory');
 // import ModuleFactory from '/wasm/slrm_module.js';
 const ModuleFactory = await import('/wasm/slrm_module.js');
@@ -38,6 +47,8 @@ const timeInterval = 4; // time step for simulation in milliseconds
 const logInterval = 0n;
 let controllerTfVec = null; // endLinkPoseの値を受け取るベクトル
 let counter = 0n;
+let initialJoints = null;
+let jointRewinder = null;
 let joints = null; // joint position vector. size is 6,7 or 8
 let prevJoints = null; // 前回のジョイントポジション
 let logPrevJoints = null; // ログ出力用の前回ジョイントポジション
@@ -153,10 +164,16 @@ self.onmessage = function(event) {
     if (data.joints) {
       // 初期ジョイントの設定処理
       joints = [...data.joints];
+      initialJoints = [...data.joints];
       console.log('Setting initial joints:'
 		  +joints.map(v => (v*57.2958).toFixed(1)).join(', '));
-      // 到着処理、prevPosition未定義
+      if (joints.length !== jointRewinder.length) {
+	// 面倒なので、ジョイント数が変わった場合はjointRewinderを全部再生成
+	jointRewinder = Array.from({length: joints.length}, ()=>new TrapVelocGenerator(5,1,1,0.125));
+      }
+      jointRewinder.map((obj) => obj.reset());
       workerState = st.slrmReady;
+      subState = sst.converged;
       console.log('Worker state changed to slrmReady');
     }
   } break;
@@ -169,7 +186,14 @@ self.onmessage = function(event) {
     // 		+ controllerTfVec[12].toFixed(3) + ', '
     // 		+ controllerTfVec[13].toFixed(3) + ', '
     // 		+ controllerTfVec[14].toFixed(3));
+    subState = sst.moving;
   } break;
+  case 'slow_rewind':
+    if (workerState === st.slrmReady) {
+      if (joints && initialJoints && jointRewinder)
+      subState = sst.rewinding;
+    }
+    break;
   case 'set_exact_solution':
     if (workerState === st.generatorReady || workerState === st.slrmReady) {
       if (data.exactSolution !== undefined) {
@@ -190,7 +214,11 @@ self.onmessage = function(event) {
 
 // ******** main function ********
 function mainFunc(timeStep) {
-  if (workerState === st.slrmReady) {
+  let result_status = SlrmModule.CmdVelGeneratorStatus.OK.value;
+  let result_other = {condition_number: 0,
+		      manipulability: 0,
+		      sensitivity_scale: 0};
+  if (workerState === st.slrmReady && subState === sst.moving) {
     // 計算処理など
     if (cmdVelGen === null ||
 	joints === null || controllerTfVec === null) {
@@ -207,6 +235,8 @@ function mainFunc(timeStep) {
     let velocities = new Float64Array(result.joint_velocities.size());
     velocities = velocities.map((_, idx) => result.joint_velocities.get(idx));
     result.joint_velocities.delete();
+    result_status = result.status;
+    result_other = result.other;
     // console.log('status: ', result.status.value);
     switch (result.status.value) {
     case SlrmModule.CmdVelGeneratorStatus.OK.value:
@@ -216,6 +246,7 @@ function mainFunc(timeStep) {
     case SlrmModule.CmdVelGeneratorStatus.END.value:
       // 目標位置に到達した場合の処理
       // cmdPoseExists = false; 
+      subState = sst.converged;
       break;
     case SlrmModule.CmdVelGeneratorStatus.SINGULARITY.value:
       // 現状のCmdVelGeneratorではこの状態は発生せずREWINDに変わる
@@ -233,6 +264,8 @@ function mainFunc(timeStep) {
       console.error('Unknown status from CmdVelGenerator:', result.status.value);
       break;
     }
+  }
+  if (result_status !== null && result_other !== null) {
     let limitFlag = Array(joints.length).fill(0);
     joints = joints.map((val, idx) => {
       if (val > jointUpperLimits[idx]) {
@@ -246,11 +279,11 @@ function mainFunc(timeStep) {
       return val;
     });
     self.postMessage({type: 'joints', joints: joints});
-    self.postMessage({type: 'status', status: statusName[result.status.value],
+    self.postMessage({type: 'status', status: statusName[result_status.value],
 		      exact_solution: exactSolution,
-		      condition_number: result.other.condition_number,
-		      manipulability: result.other.manipulability,
-		      sensitivity_scale: result.other.sensitivity_scale,
+		      condition_number: result_other.condition_number,
+		      manipulability: result_other.manipulability,
+		      sensitivity_scale: result_other.sensitivity_scale,
 		      limit_flag: limitFlag});
     counter ++;
     // if (counter <= 1n) {
@@ -263,10 +296,10 @@ function mainFunc(timeStep) {
 	if (Math.max(...logPrevJoints.map((v, i) => Math.abs(v - joints[i]))) > 0.005) {
 	  // ログ出力
 	  console.log('counter:', counter,
-		      'status: ', statusName[result.status.value] ,
-		      ' condition:' , result.other.condition_number.toFixed(2) ,
-		      ' m:' , result.other.manipulability.toFixed(3) ,
-		      ' k:' , result.other.sensitivity_scale.toFixed(3)
+		      'status: ', statusName[result_status.value] ,
+		      ' condition:' , result_other.condition_number.toFixed(2) ,
+		      ' m:' , result_other.manipulability.toFixed(3) ,
+		      ' k:' , result_other.sensitivity_scale.toFixed(3)
 		      + '\n' +
 		      'limit flags: ' + limitFlag.join(', '));
 	  //   console.log('Worker: joints at ' + (counter / (60n*100n / BigInt(timeInterval))).toString() + ' minutes: ' + joints.map(v => (v*57.2958).toFixed(1)).join(', '));
@@ -274,6 +307,8 @@ function mainFunc(timeStep) {
       }
       logPrevJoints = joints; // ログ出力用の前回ジョイントポジションを更新 配列の複製不要
     }
+  }
+  if (workerState === st.slrmReady && subState === sst.rewinding) {
   }
 }
 
