@@ -51,6 +51,7 @@ let initialJoints = null;
 let jointRewinder = null;
 let joints = null; // joint position vector. size is 6,7 or 8
 let prevJoints = null; // 前回のジョイントポジション
+let velocities = null;
 let logPrevJoints = null; // ログ出力用の前回ジョイントポジション
 const jointUpperLimits = [];
 const jointLowerLimits = [];
@@ -165,9 +166,11 @@ self.onmessage = function(event) {
       // 初期ジョイントの設定処理
       joints = [...data.joints];
       initialJoints = [...data.joints];
+      velocities = new Float64Array(joints.length);
       console.log('Setting initial joints:'
 		  +joints.map(v => (v*57.2958).toFixed(1)).join(', '));
-      if (joints.length !== jointRewinder.length) {
+      if (!jointRewinder ||
+	  joints.length !== jointRewinder.length) {
 	// 面倒なので、ジョイント数が変わった場合はjointRewinderを全部再生成
 	jointRewinder = Array.from({length: joints.length}, ()=>new TrapVelocGenerator(5,1,1,0.125));
       }
@@ -218,13 +221,14 @@ function mainFunc(timeStep) {
   let result_other = {condition_number: 0,
 		      manipulability: 0,
 		      sensitivity_scale: 0};
+  if (!cmdVelGen || !joints) return;
   if (workerState === st.slrmReady && subState === sst.moving) {
     // 計算処理など
-    if (cmdVelGen === null ||
-	joints === null || controllerTfVec === null) {
-      // console.warn('controllerTfVec or cmdVelGen is not ready yet.');
+    if (controllerTfVec === null) {
+      // console.warn('controllerTfVec is not ready yet.');
       return;
     }
+    // console.log('subState: ', subState);
     // console.log('joints: ' + joints.map(v => v.toFixed(3)).join(', ') + '\n' +
     // 		'controllerTfVec: ' + controllerTfVec.map(v => v.toFixed(3)).join(', '));
     const jointVec = makeDoubleVectorG(joints);
@@ -232,7 +236,7 @@ function mainFunc(timeStep) {
     const result = cmdVelGen.calcVelocityMat(jointVec, endLinkPose);
     jointVec.delete();
     endLinkPose.delete();
-    let velocities = new Float64Array(result.joint_velocities.size());
+    velocities = new Float64Array(result.joint_velocities.size());
     velocities = velocities.map((_, idx) => result.joint_velocities.get(idx));
     result.joint_velocities.delete();
     result_status = result.status;
@@ -263,6 +267,11 @@ function mainFunc(timeStep) {
     default:
       console.error('Unknown status from CmdVelGenerator:', result.status.value);
       break;
+    }
+  }
+  if (workerState === st.slrmReady && subState === sst.rewinding) {
+    if (!velocities) {
+      console.log('run joint rewinding mode');
     }
   }
   if (result_status !== null && result_other !== null) {
@@ -308,9 +317,8 @@ function mainFunc(timeStep) {
       logPrevJoints = joints; // ログ出力用の前回ジョイントポジションを更新 配列の複製不要
     }
   }
-  if (workerState === st.slrmReady && subState === sst.rewinding) {
-  }
 }
+
 
 // ******** worker main loop ********
 function mainLoop(prevTime = performance.now()-timeInterval) {
