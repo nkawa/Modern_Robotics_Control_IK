@@ -43,8 +43,8 @@ const statusName = {
 
 // ******** definitions of global variables ********
 const timeInterval = 4; // time step for simulation in milliseconds
-// const logInterval = 1000n/BigInt(timeInterval); // log interval in BigInt
-const logInterval = 0n;
+const logInterval = 1000n/BigInt(timeInterval); // log interval in BigInt
+// const logInterval = 0n;
 let controllerTfVec = null; // endLinkPoseの値を受け取るベクトル
 let counter = 0n;
 let initialJoints = null;
@@ -164,8 +164,10 @@ self.onmessage = function(event) {
 				 workerState === st.slrmReady) {
     if (data.joints) {
       // 初期ジョイントの設定処理
-      joints = [...data.joints];
-      initialJoints = [...data.joints];
+      joints = new Float64Array(data.joints.length);
+      joints.set(data.joints);
+      initialJoints = joints.slice();
+      prevJoints = joints.slice();
       velocities = new Float64Array(joints.length);
       console.log('Setting initial joints:'
 		  +joints.map(v => (v*57.2958).toFixed(1)).join(', '));
@@ -215,12 +217,16 @@ self.onmessage = function(event) {
   }
 };
 
+let result_status = null;
+let result_other = null;
 // ******** main function ********
 function mainFunc(timeStep) {
-  let result_status = SlrmModule.CmdVelGeneratorStatus.OK.value;
-  let result_other = {condition_number: 0,
-		      manipulability: 0,
-		      sensitivity_scale: 0};
+  // if (!result_status)
+  //   result_status = {value: SlrmModule.CmdVelGeneratorStatus.OK.value};
+  // if (!result_othre)
+  //   result_other = {condition_number: 0,
+  // 		    manipulability: 0,
+  // 		    sensitivity_scale: 0};
   if (!cmdVelGen || !joints) return;
   if (workerState === st.slrmReady && subState === sst.moving) {
     // 計算処理など
@@ -244,8 +250,10 @@ function mainFunc(timeStep) {
     // console.log('status: ', result.status.value);
     switch (result.status.value) {
     case SlrmModule.CmdVelGeneratorStatus.OK.value:
-      prevJoints = joints;
-      joints = joints.map((val, idx) => val + velocities[idx]* timeStep);
+      prevJoints.set(joints);
+      for (let i=0; i<joints.length; i++) {
+	joints[i] = joints[i] + velocities[i]* timeStep;
+      }
       break;
     case SlrmModule.CmdVelGeneratorStatus.END.value:
       // 目標位置に到達した場合の処理
@@ -258,7 +266,7 @@ function mainFunc(timeStep) {
       console.error('CmdVelGenerator returned SINGULARITY status');
       break;
     case SlrmModule.CmdVelGeneratorStatus.REWIND.value:
-      joints = prevJoints; // 前の状態に戻す. 特異点に入る直前の状態になる
+      joints.set(prevJoints); // 前の状態に戻す. 特異点に入る直前の状態になる
       // cmdPoseExists = false; // cmdPoseが存在しない
       break;
     case SlrmModule.CmdVelGeneratorStatus.ERROR.value:
@@ -276,18 +284,18 @@ function mainFunc(timeStep) {
   }
   if (result_status !== null && result_other !== null) {
     let limitFlag = Array(joints.length).fill(0);
-    joints = joints.map((val, idx) => {
-      if (val > jointUpperLimits[idx]) {
-	limitFlag[idx] = 1;
-	return jointUpperLimits[idx];
+    for (let i=0; i<joints.length; i++) {
+      if (joints[i] > jointUpperLimits[i]) {
+	limitFlag[i] = 1;
+	joints[i] = jointUpperLimits[i];
       }
-      if (val < jointLowerLimits[idx]) {
-	limitFlag[idx] = -1;
-	return jointLowerLimits[idx];
+      if (joints[i] < jointLowerLimits[i]) {
+	limitFlag[i] = -1;
+	joints[i] = jointLowerLimits[i];
       }
-      return val;
-    });
-    self.postMessage({type: 'joints', joints: joints});
+    }
+    // console.log('result_status: ', result_status);
+    self.postMessage({type: 'joints', joints: [...joints]});
     self.postMessage({type: 'status', status: statusName[result_status.value],
 		      exact_solution: exactSolution,
 		      condition_number: result_other.condition_number,
@@ -314,7 +322,8 @@ function mainFunc(timeStep) {
 	  //   console.log('Worker: joints at ' + (counter / (60n*100n / BigInt(timeInterval))).toString() + ' minutes: ' + joints.map(v => (v*57.2958).toFixed(1)).join(', '));
 	}
       }
-      logPrevJoints = joints; // ログ出力用の前回ジョイントポジションを更新 配列の複製不要
+      if (!logPrevJoints) logPrevJoints = joints.slice();
+      logPrevJoints.set(joints); // ログ出力用の前回ジョイントポジションを更新 配列の複製不要
     }
   }
 }
