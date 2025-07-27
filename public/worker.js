@@ -175,9 +175,8 @@ self.onmessage = function(event) {
 	  joints.length !== jointRewinder.length) {
 	// 面倒なので、ジョイント数が変わった場合はjointRewinderを全部再生成
 	jointRewinder = Array.from({length: joints.length}, ()=>new TrapVelocGenerator(5,1,1,0.0625));
-	jointRewinder.map((der,ix)=>der.setX0(initialJoints[ix]));
       }
-      jointRewinder.map((obj) => obj.reset());
+      jointRewinder.map((der,ix)=>{der.reset(); der.setX0(initialJoints[ix])});
       workerState = st.slrmReady;
       subState = sst.converged;
       console.log('Worker state changed to slrmReady');
@@ -223,10 +222,12 @@ self.onmessage = function(event) {
   }
 };
 
-let result_status = null;
-let result_other = null;
 // ******** main function ********
 function mainFunc(timeStep) {
+  let result_status = null;
+  let result_other = null;
+  let position = null;
+  let quaternion = null;
   // if (!result_status)
   //   result_status = {value: SlrmModule.CmdVelGeneratorStatus.OK.value};
   // if (!result_othre)
@@ -245,14 +246,19 @@ function mainFunc(timeStep) {
     // 		'controllerTfVec: ' + controllerTfVec.map(v => v.toFixed(3)).join(', '));
     const jointVec = makeDoubleVectorG(joints);
     const endLinkPose = makeDoubleVectorG(controllerTfVec);
-    const result = cmdVelGen.calcVelocityMat(jointVec, endLinkPose);
+    const result = cmdVelGen.calcVelocityPQ(jointVec, endLinkPose);
     jointVec.delete();
     endLinkPose.delete();
-    velocities = new Float64Array(result.joint_velocities.size());
-    velocities = velocities.map((_, idx) => result.joint_velocities.get(idx));
+    // velocities = new Float64Array(result.joint_velocities.size());
+    // velocities = velocities.map((_, idx) => result.joint_velocities.get(idx));
+    for (let i=0; i<velocities.length; i++) {
+      velocities[i] = result.joint_velocities.get(i);
+    }
     result.joint_velocities.delete();
     result_status = result.status;
     result_other = result.other;
+    result.position.delete();
+    result.quaternion.delete();
     // console.log('status: ', result.status.value);
     switch (result.status.value) {
     case SlrmModule.CmdVelGeneratorStatus.OK.value:
