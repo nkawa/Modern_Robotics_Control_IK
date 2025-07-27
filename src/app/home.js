@@ -193,6 +193,7 @@ export default function DynamicHome(props) {
     };
     return theta_body_initial_map[robot_model] || [0, 0, 0, 0, 0, 0].map(x=>x*Math.PI/180);
   });
+  const [slowRewindMode, setSlowRewindMode] = React.useState(null);
   const [theta_tool, setThetaTool] = React.useState(()=>{
     const theta_tool_inital = 0;
     return theta_tool_inital});
@@ -264,6 +265,9 @@ export default function DynamicHome(props) {
     let updateStartPose = false;
     if (baseLinkPoseInv.current !== null) {
       if (!trigger_on) {
+	// console.log('change slowRewindMode: ', slowRewindMode);
+	workerRef.current.postMessage({ type: 'slow_rewind',
+					slowRewind: slowRewindMode });
 	updateStartPose = true;
 	controllerMagnificationUsed.current = controllerMagnification.current;
       }
@@ -283,7 +287,7 @@ export default function DynamicHome(props) {
       }
     }
     controllerMagnificationPrev.current = controllerMagnification.current;
-  }, [...controller_object.elements, rendered, trigger_on ]);
+  }, [...controller_object.elements, rendered, trigger_on, slowRewindMode ]);
 
   // Gripper Control 
   function clampTool(value) {
@@ -355,6 +359,7 @@ export default function DynamicHome(props) {
       baseLinkPoseInv,
       controllerMagnification,
       controllerStartInv,
+      setSlowRewindMode,
     });
     // set rendered state after a short delay to ensure the scene is ready
     // setTimeout(() => set_rendered(true), 16.5);

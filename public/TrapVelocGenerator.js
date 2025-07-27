@@ -6,6 +6,7 @@ export class TrapVelocGenerator {
     this.v1 = vmax;
     this.a2 = acc;
     this.constrained = false;
+    this.x0 = 0;
   }
   #vsFunc(x) {
     const a1 = this.a1;
@@ -23,9 +24,13 @@ export class TrapVelocGenerator {
     }
     return vs;
   }
-  calcNext(xt, vt, deltaT) {
+  setX0(x) {
+    this.x0 = x;
+  }
+  calcNext(xt2, vt, deltaT) {
+    const xt = xt2 - this.x0;
     if (this.constrained === true) {
-      return {x: xt + vt * deltaT,
+      return {x: this.x0 + xt + vt * deltaT,
 	      v: this.#vsFunc(xt + vt * deltaT),
 	      constrained: true};
     } else {
@@ -33,22 +38,22 @@ export class TrapVelocGenerator {
 	const vt1 = vt + this.a2 * deltaT;
 	const xt1 = xt + vt * deltaT;
 	if (vt1 < this.#vsFunc(xt1)) {
-	  return {x: xt1, v: vt1,
+	  return {x: this.x0 + xt1, v: vt1,
 		  constrained: false};
 	} else {
 	  this.constrained = true;
-	  return {x: xt1, v: this.#vsFunc(xt1),
+	  return {x: this.x0 + xt1, v: this.#vsFunc(xt1),
 		  constrained: true};
 	}
       } else {
 	const vt1 = vt - this.a2 * deltaT;
 	const xt1 = xt + vt * deltaT;
 	if (vt1 > this.#vsFunc(xt1)) {
-	  return {x: xt1, v: vt1,
+	  return {x: this.x0 + xt1, v: vt1,
 		  constrained: false};
 	} else {
 	  this.constrained = true;
-	  return {x: xt1, v: this.#vsFunc(xt1),
+	  return {x: this.x0 + xt1, v: this.#vsFunc(xt1),
 		  constrained: true};
 	}
       }

@@ -31,6 +31,7 @@ export default function registerAframeComponents(options) {
     baseLinkPoseInv,
     controllerMagnification,
     controllerStartInv,
+    setSlowRewindMode,
   } = options;
   
   AFRAME.registerComponent('robot-click', {
@@ -103,7 +104,12 @@ export default function registerAframeComponents(options) {
 	console.debug("MAGNIFICATION RESET", controllerMagnification.current);
       }
       if (evt.detail.y < -0.35) { console.log("UP", evt.detail.y); }
-      if (evt.detail.x < -0.35) { console.log("LEFT", evt.detail.x); }
+      if (evt.detail.x < -0.35) {
+	console.log("LEFT", evt.detail.x);
+	setSlowRewindMode(true);
+      } else {
+	setSlowRewindMode(false);
+      }
       if (evt.detail.x > 0.35) { console.log("RIGHT", evt.detail.x); }
       this.detail_y_prev = evt.detail.y;
     },

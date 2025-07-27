@@ -174,7 +174,8 @@ self.onmessage = function(event) {
       if (!jointRewinder ||
 	  joints.length !== jointRewinder.length) {
 	// 面倒なので、ジョイント数が変わった場合はjointRewinderを全部再生成
-	jointRewinder = Array.from({length: joints.length}, ()=>new TrapVelocGenerator(5,1,1,0.125));
+	jointRewinder = Array.from({length: joints.length}, ()=>new TrapVelocGenerator(5,1,1,0.0625));
+	jointRewinder.map((der,ix)=>der.setX0(initialJoints[ix]));
       }
       jointRewinder.map((obj) => obj.reset());
       workerState = st.slrmReady;
@@ -194,9 +195,14 @@ self.onmessage = function(event) {
     subState = sst.moving;
   } break;
   case 'slow_rewind':
-    if (workerState === st.slrmReady) {
-      if (joints && initialJoints && jointRewinder)
-      subState = sst.rewinding;
+    console.log('receive slow_rewind: ', data.slowRewind);
+    if (workerState === st.slrmReady &&
+	joints && initialJoints && jointRewinder) {
+      if (data.slowRewind == true) {
+	subState = sst.rewinding;
+      } else {
+	subState = sst.converged;
+      }
     }
     break;
   case 'set_exact_solution':
@@ -278,8 +284,16 @@ function mainFunc(timeStep) {
     }
   }
   if (workerState === st.slrmReady && subState === sst.rewinding) {
-    if (!velocities) {
-      console.log('run joint rewinding mode');
+    if (velocities) {
+      const res = jointRewinder.map((der,i)=>
+	der.calcNext(joints[i], velocities[i], timeStep));
+      for (let i=0; i<joints.length; i++) {
+	joints[i] = res[i].x;
+	velocities[i] = res[i].v;
+      }
+      result_status = {value: SlrmModule.CmdVelGeneratorStatus.OK.value};
+      result_other = {condition_number: 0,
+		      manipulability: 0, sensitivity_scale: 0};
     }
   }
   if (result_status !== null && result_other !== null) {
