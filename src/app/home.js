@@ -89,6 +89,7 @@ export default function DynamicHome(props) {
   const workerRef = React.useRef(null);
   const workerLastJoints = React.useRef(null);
   const workerLastStatus = React.useRef(null);
+  const workerLastPose = React.useRef(null);
   // const useWorkerRef = React.useRef(true); // Flag to indicate if the worker is ready
   React.useEffect(() => {
     if (workerRef.current === null) {
@@ -120,6 +121,9 @@ export default function DynamicHome(props) {
 	  break;
 	case 'status':
 	  workerLastStatus.current = event.data;
+	  break;
+	case 'pose':
+	  workerLastPose.current = event.data;
 	  break;
 	}
       };

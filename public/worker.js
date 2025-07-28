@@ -43,8 +43,8 @@ const statusName = {
 
 // ******** definitions of global variables ********
 const timeInterval = 4; // time step for simulation in milliseconds
-const logInterval = 1000n/BigInt(timeInterval); // log interval in BigInt
-// const logInterval = 0n;
+// const logInterval = 1000n/BigInt(timeInterval); // log interval in BigInt
+const logInterval = 0n;
 let controllerTfVec = null; // endLinkPoseの値を受け取るベクトル
 let counter = 0n;
 let initialJoints = null;
@@ -257,6 +257,12 @@ function mainFunc(timeStep) {
     result.joint_velocities.delete();
     result_status = result.status;
     result_other = result.other;
+    if (!position || !quaternion) {
+      position = new Float64Array(3);
+      quaternion = new Float64Array(4);
+    }
+    position.set(result.position.get());
+    quaternion.set(result.quaternion.get());
     result.position.delete();
     result.quaternion.delete();
     // console.log('status: ', result.status.value);
@@ -307,11 +313,11 @@ function mainFunc(timeStep) {
     for (let i=0; i<joints.length; i++) {
       if (joints[i] > jointUpperLimits[i]) {
 	limitFlag[i] = 1;
-	joints[i] = jointUpperLimits[i];
+	joints[i] = jointUpperLimits[i] - 0.001; // 
       }
       if (joints[i] < jointLowerLimits[i]) {
 	limitFlag[i] = -1;
-	joints[i] = jointLowerLimits[i];
+	joints[i] = jointLowerLimits[i] + 0.001; //
       }
     }
     // console.log('result_status: ', result_status);
