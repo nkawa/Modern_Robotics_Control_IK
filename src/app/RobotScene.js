@@ -37,6 +37,29 @@ export default function RobotScene(props) {
     );
     }
 
+  // definition of the end link axes marker
+  const axis_length = 0.210;
+  const cyl_length = (axis_length/2).toString();
+  const cyl_hight = (axis_length).toString();
+  const cyl_radius = '0.0035';
+  const origin_marker_radius = '0.012';
+  const origin_marker_size = `${origin_marker_radius} ${origin_marker_radius} ${origin_marker_radius}`;
+  const origin_marker_color = 'blue';
+  const end_link = (
+    <a-entity end-link position={`0 0 0`} rotation={`0 0 0`}>
+      <a-sphere 
+	scale={origin_marker_size}
+	color={origin_marker_color}
+	visible={true}>
+      </a-sphere>
+      <a-cylinder position={`${cyl_length} 0 0`} rotation={`0 0 -90`}
+        	  height={cyl_hight} radius={cyl_radius} color="red" />
+      <a-cylinder position={`0 ${cyl_length} 0`} rotation={`0 0 0`}
+		  height={cyl_hight} radius={cyl_radius} material='color: #00ff00' />
+      <a-cylinder position={`0 0 ${cyl_length}`} rotation={`90 0 0`}
+        	  height={cyl_hight} radius={cyl_radius} color="blue" />
+    </a-entity>
+  );
   // console.log("dsp_message: ", dsp_message);
   return (
     <>
@@ -48,7 +71,6 @@ export default function RobotScene(props) {
 
         {/* Robot */}
         <Select_Robot {...robotProps}/>
-
         {/* Light */}
         <a-entity light="type: directional; color: #FFF; intensity: 0.25" position="1 1 1"></a-entity>
         <a-entity light="type: directional; color: #FFF; intensity: 0.25" position="-1 1 1"></a-entity>
@@ -87,6 +109,9 @@ export default function RobotScene(props) {
           <Line pos1={{x:0,y:0,z:0}} pos2={{x:0.2,y:0,z:0}} color="red" visible={true} />   
           <Line pos1={{x:0,y:0,z:0}} pos2={{x:0,y:0.2,z:0}}  color="green" visible={true} />  */}
          
+        {/* End Link */}
+        {end_link}
+	{/* End Link Axes */}
       </a-scene>
       <Controller {...controllerProps}/>
       <div className="footer">

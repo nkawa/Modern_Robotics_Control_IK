@@ -43,8 +43,7 @@ const statusName = {
 
 // ******** definitions of global variables ********
 const timeInterval = 4; // time step for simulation in milliseconds
-// const logInterval = 1000n/BigInt(timeInterval); // log interval in BigInt
-const logInterval = 0n;
+const logInterval = 0n/BigInt(timeInterval); // log interval in BigInt
 let controllerTfVec = null; // endLinkPoseの値を受け取るベクトル
 let counter = 0n;
 let initialJoints = null;
@@ -174,11 +173,20 @@ self.onmessage = function(event) {
       if (!jointRewinder ||
 	  joints.length !== jointRewinder.length) {
 	// 面倒なので、ジョイント数が変わった場合はjointRewinderを全部再生成
-	jointRewinder = Array.from({length: joints.length}, ()=>new TrapVelocGenerator(5,1,1,0.0625));
+	// jointRewinder = Array.from({length: joints.length}, ()=>new TrapVelocGenerator(5,1,1,0.0625));
+	jointRewinder = Array(joints.length).fill(null).map((_, i) => {
+	  if (i<=1) { // joint 1, 2は特に遅くする
+	    return new TrapVelocGenerator(5, 1, 0.2, 0.02);
+	  } else {
+	    return new TrapVelocGenerator(5, 1, 1, 0.0625); // 5s, 1m/s, 1rad/s, 0.0625s
+	  }
+	});
       }
       jointRewinder.map((der,ix)=>{der.reset(); der.setX0(initialJoints[ix])});
       workerState = st.slrmReady;
-      subState = sst.converged;
+      controllerTfVec = []; // 現在値をゴールにしてcalcVelocityPQを1回実行する
+      subState = sst.moving; // 目標位置に移動中
+      // subState = sst.converged;
       console.log('Worker state changed to slrmReady');
     }
   } break;
@@ -194,7 +202,6 @@ self.onmessage = function(event) {
     subState = sst.moving;
   } break;
   case 'slow_rewind':
-    console.log('receive slow_rewind: ', data.slowRewind);
     if (workerState === st.slrmReady &&
 	joints && initialJoints && jointRewinder) {
       if (data.slowRewind == true) {
@@ -235,15 +242,22 @@ function mainFunc(timeStep) {
   // 		    manipulability: 0,
   // 		    sensitivity_scale: 0};
   if (!cmdVelGen || !joints) return;
-  if (workerState === st.slrmReady && subState === sst.moving) {
-    // 計算処理など
+  if (workerState === st.slrmReady &&
+      (subState === sst.moving || subState === sst.rewinding)) {
+    if (subState === sst.rewinding) {
+      const res = jointRewinder.map((der,i)=>
+	der.calcNext(joints[i], velocities[i], timeStep));
+      for (let i=0; i<joints.length; i++) {
+	joints[i] = res[i].x;
+	velocities[i] = res[i].v;
+      }
+    } else if (subState === sst.converged) {
+      velocities.fill(0); // sst.rewindingから出た時に必要
+    }
     if (controllerTfVec === null) {
       // console.warn('controllerTfVec is not ready yet.');
       return;
     }
-    // console.log('subState: ', subState);
-    // console.log('joints: ' + joints.map(v => v.toFixed(3)).join(', ') + '\n' +
-    // 		'controllerTfVec: ' + controllerTfVec.map(v => v.toFixed(3)).join(', '));
     const jointVec = makeDoubleVectorG(joints);
     const endLinkPose = makeDoubleVectorG(controllerTfVec);
     const result = cmdVelGen.calcVelocityPQ(jointVec, endLinkPose);
@@ -251,8 +265,10 @@ function mainFunc(timeStep) {
     endLinkPose.delete();
     // velocities = new Float64Array(result.joint_velocities.size());
     // velocities = velocities.map((_, idx) => result.joint_velocities.get(idx));
-    for (let i=0; i<velocities.length; i++) {
-      velocities[i] = result.joint_velocities.get(i);
+    if (subState !== sst.rewinding) {
+      for (let i=0; i<velocities.length; i++) {
+	velocities[i] = result.joint_velocities.get(i);
+      }
     }
     result.joint_velocities.delete();
     result_status = result.status;
@@ -261,51 +277,50 @@ function mainFunc(timeStep) {
       position = new Float64Array(3);
       quaternion = new Float64Array(4);
     }
-    position.set(result.position.get());
-    quaternion.set(result.quaternion.get());
+    position[0] = result.position.get(0);
+    position[1] = result.position.get(1);
+    position[2] = result.position.get(2);
+    quaternion[0] = result.quaternion.get(0);
+    quaternion[1] = result.quaternion.get(1);
+    quaternion[2] = result.quaternion.get(2);
+    quaternion[3] = result.quaternion.get(3);
     result.position.delete();
     result.quaternion.delete();
     // console.log('status: ', result.status.value);
-    switch (result.status.value) {
-    case SlrmModule.CmdVelGeneratorStatus.OK.value:
-      prevJoints.set(joints);
-      for (let i=0; i<joints.length; i++) {
-	joints[i] = joints[i] + velocities[i]* timeStep;
-      }
-      break;
-    case SlrmModule.CmdVelGeneratorStatus.END.value:
-      // 目標位置に到達した場合の処理
-      // cmdPoseExists = false; 
-      subState = sst.converged;
-      break;
-    case SlrmModule.CmdVelGeneratorStatus.SINGULARITY.value:
-      // 現状のCmdVelGeneratorではこの状態は発生せずREWINDに変わる
-      // cmdPoseExists = false; // cmdPoseが存在しない
-      console.error('CmdVelGenerator returned SINGULARITY status');
-      break;
-    case SlrmModule.CmdVelGeneratorStatus.REWIND.value:
-      joints.set(prevJoints); // 前の状態に戻す. 特異点に入る直前の状態になる
-      // cmdPoseExists = false; // cmdPoseが存在しない
-      break;
-    case SlrmModule.CmdVelGeneratorStatus.ERROR.value:
-      console.error('CmdVelGenerator returned ERROR status');
-      break;
-    default:
-      console.error('Unknown status from CmdVelGenerator:', result.status.value);
-      break;
+    if (subState === sst.rewinding &&
+	result.status.value !== SlrmModule.CmdVelGeneratorStatus.END.value &&
+	result.status.value !== SlrmModule.CmdVelGeneratorStatus.OK.value) {
+      console.warn('CmdVelGenerator returned status other than END or OK during rewinding:', statusName[result.status.value]);
     }
-  }
-  if (workerState === st.slrmReady && subState === sst.rewinding) {
-    if (velocities) {
-      const res = jointRewinder.map((der,i)=>
-	der.calcNext(joints[i], velocities[i], timeStep));
-      for (let i=0; i<joints.length; i++) {
-	joints[i] = res[i].x;
-	velocities[i] = res[i].v;
+    if (subState === sst.moving) {
+      switch (result.status.value) {
+      case SlrmModule.CmdVelGeneratorStatus.OK.value:
+	prevJoints.set(joints);
+	for (let i=0; i<joints.length; i++) {
+	  joints[i] = joints[i] + velocities[i]* timeStep;
+	}
+	break;
+      case SlrmModule.CmdVelGeneratorStatus.END.value:
+	// 目標位置に到達した場合の処理
+	// cmdPoseExists = false; 
+	subState = sst.converged;
+	break;
+      case SlrmModule.CmdVelGeneratorStatus.SINGULARITY.value:
+	// 現状のCmdVelGeneratorではこの状態は発生せずREWINDに変わる
+	// cmdPoseExists = false; // cmdPoseが存在しない
+	console.error('CmdVelGenerator returned SINGULARITY status');
+	break;
+      case SlrmModule.CmdVelGeneratorStatus.REWIND.value:
+	joints.set(prevJoints); // 前の状態に戻す. 特異点に入る直前の状態になる
+	// cmdPoseExists = false; // cmdPoseが存在しない
+	break;
+      case SlrmModule.CmdVelGeneratorStatus.ERROR.value:
+	console.error('CmdVelGenerator returned ERROR status');
+	break;
+      default:
+	console.error('Unknown status from CmdVelGenerator:', result.status.value);
+	break;
       }
-      result_status = {value: SlrmModule.CmdVelGeneratorStatus.OK.value};
-      result_other = {condition_number: 0,
-		      manipulability: 0, sensitivity_scale: 0};
     }
   }
   if (result_status !== null && result_other !== null) {
@@ -320,7 +335,6 @@ function mainFunc(timeStep) {
 	joints[i] = jointLowerLimits[i] + 0.001; //
       }
     }
-    // console.log('result_status: ', result_status);
     self.postMessage({type: 'joints', joints: [...joints]});
     self.postMessage({type: 'status', status: statusName[result_status.value],
 		      exact_solution: exactSolution,
@@ -328,6 +342,10 @@ function mainFunc(timeStep) {
 		      manipulability: result_other.manipulability,
 		      sensitivity_scale: result_other.sensitivity_scale,
 		      limit_flag: limitFlag});
+    self.postMessage({type: 'pose',
+		      position: position,
+		      quaternion: quaternion,
+		     });
     counter ++;
     // if (counter <= 1n) {
     //   console.log('type of logInterval: ', typeof logInterval,

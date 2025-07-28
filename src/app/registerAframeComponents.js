@@ -1,13 +1,17 @@
+import { three2worldMatGen, world2threeMatGen } from './constTransformGen';
+
 let registered = false;
 let lastUpdate = 0;
 
 let controllerCoord = new THREE.Object3D();
 let controllerPosition = new THREE.Vector3();
+let endLinkPosition = new THREE.Vector3();
 let endLinkOrientation = new THREE.Quaternion();
+let baseLinkPose = null;
 
 export default function registerAframeComponents(options) {
-  // const three2worldMat = three2worldMatGen();
-  // const world2threeMat = world2threeMatGen();
+  const three2worldMat = three2worldMatGen();
+  const world2threeMat = world2threeMatGen();
   if (registered) return;
   registered = true;
 
@@ -28,6 +32,7 @@ export default function registerAframeComponents(options) {
     workerLastJoints,
     setThetaBody,
     endLinkPose,
+    endLinkPoseUpdater,
     baseLinkPoseInv,
     controllerMagnification,
     controllerStartInv,
@@ -36,11 +41,16 @@ export default function registerAframeComponents(options) {
   
   AFRAME.registerComponent('robot-click', {
     init: function () {
-      if (this.el.object3D) {
+      if (this.el.object3D?.matrixWorld) {
+	baseLinkPose = this.el.object3D.matrixWorld.clone();
 	baseLinkPoseInv.current = this.el.object3D.matrixWorld.clone().invert();
-	console.log('baseLinkPoseInv: ', baseLinkPoseInv.current.elements[9].toFixed(3), ', ',
-		    -baseLinkPoseInv.current.elements[8].toFixed(3), ', ',
-		    baseLinkPoseInv.current.elements[4].toFixed(3));
+	console.log('00 baseLinkPose diagonal: ',
+		    baseLinkPose.elements[0].toFixed(3), ', ',
+		    baseLinkPose.elements[5].toFixed(3), ', ',
+		    baseLinkPose.elements[10].toFixed(3));
+	console.log('00 baseLinkPoseInv: ', baseLinkPoseInv.current.elements[0].toFixed(3), ', ',
+		    baseLinkPoseInv.current.elements[5].toFixed(3), ', ',
+		    baseLinkPoseInv.current.elements[10].toFixed(3));
       }
       this.el.addEventListener('click', () => {
         robotChange();
@@ -49,18 +59,27 @@ export default function registerAframeComponents(options) {
     },
     tick: function () {
       if (this.el.object3D) {
-	const baseTworld = this.el.object3D.matrixWorld.clone().invert();
-	if (!baseTworld.equals(baseLinkPoseInv.current)) {
-	  baseLinkPoseInv.current = baseTworld;
-	  console.debug('baseLinkPoseInv: ', baseLinkPoseInv.current.elements[0].toFixed(3), ', ',
-			baseLinkPoseInv.current.elements[1].toFixed(3), ', ',
-			baseLinkPoseInv.current.elements[2].toFixed(3));
-	  console.debug('baseLinkPoseInv: ', baseLinkPoseInv.current.elements[4].toFixed(3), ', ',
-			baseLinkPoseInv.current.elements[5].toFixed(3), ', ',
-			baseLinkPoseInv.current.elements[6].toFixed(3));
-	  console.debug('baseLinkPoseInv: ', baseLinkPoseInv.current.elements[8].toFixed(3), ', ',
-			baseLinkPoseInv.current.elements[9].toFixed(3), ', ',
-			baseLinkPoseInv.current.elements[10].toFixed(3));
+	if (this.el.object3D.matrixWorld) {
+	  if (!baseLinkPose.equals(this.el.object3D.matrixWorld)) {
+	    baseLinkPose = this.el.object3D.matrixWorld.clone();
+	    baseLinkPoseInv.current = this.el.object3D.matrixWorld.clone().invert();
+	    // console.log('11 baseLinkPoseInv dialg: ',
+	    // 		baseLinkPoseInv.current.elements[0].toFixed(3), ', ',
+	    // 		baseLinkPoseInv.current.elements[5].toFixed(3), ', ',
+	    // 		baseLinkPoseInv.current.elements[10].toFixed(3));
+	  }
+	// const baseTworld = this.el.object3D.matrixWorld.clone().invert();
+	// if (!baseTworld.equals(baseLinkPoseInv.current)) {
+	//   baseLinkPoseInv.current = baseTworld;
+	//   console.debug('22 baseLinkPoseInv: ', baseLinkPoseInv.current.elements[0].toFixed(3), ', ',
+	// 		baseLinkPoseInv.current.elements[1].toFixed(3), ', ',
+	// 		baseLinkPoseInv.current.elements[2].toFixed(3));
+	//   console.debug('baseLinkPoseInv: ', baseLinkPoseInv.current.elements[4].toFixed(3), ', ',
+	// 		baseLinkPoseInv.current.elements[5].toFixed(3), ', ',
+	// 		baseLinkPoseInv.current.elements[6].toFixed(3));
+	//   console.debug('baseLinkPoseInv: ', baseLinkPoseInv.current.elements[8].toFixed(3), ', ',
+	// 		baseLinkPoseInv.current.elements[9].toFixed(3), ', ',
+	// 		baseLinkPoseInv.current.elements[10].toFixed(3));
 	}
       }
     }
@@ -240,13 +259,34 @@ export default function registerAframeComponents(options) {
   //
   AFRAME.registerComponent('end-link', {
     init() {
-      this.lastPose = new THREE.Matrix4();
+      // this.lastPose = new THREE.Matrix4();
     },
     tick() {
+      endLinkPoseUpdater();
       const obj = this.el.object3D;
-      if (!obj.matrixWorld || !baseLinkPoseInv.current) return; // not yet initialized
-      obj.getWorldQuaternion(endLinkOrientation);
-      const pose = baseLinkPoseInv.current.clone().multiply(obj.matrixWorld);
+      if (!obj.matrixWorld ||
+	  !baseLinkPoseInv.current ||
+	  !baseLinkPose
+	 ) return; // not yet initialized
+      const endLinkTHREE = baseLinkPose.clone().
+	    multiply(world2threeMat).multiply(endLinkPose.current);
+      endLinkPosition.setFromMatrixPosition(endLinkTHREE);
+      endLinkOrientation.setFromRotationMatrix(endLinkTHREE);
+      this.el.object3D.position.copy(endLinkPosition);
+      this.el.object3D.quaternion.copy(endLinkOrientation);
+      // console.log('baseLinkPose diagonal: ',
+      // 		  baseLinkPose.elements[0].toFixed(3), ', ',
+      // 		  baseLinkPose.elements[5].toFixed(3), ', ',
+      // 		  baseLinkPose.elements[10].toFixed(3),
+      // 		  ' end-link 3 position: ', endLinkPosition.x.toFixed(3), ', ',
+      // 		  endLinkPosition.y.toFixed(3), ', ',
+      // 		  endLinkPosition.z.toFixed(3),
+      // 		  ' end-link w position: ', endLinkPose.current.elements[12].toFixed(3), ', ',
+      // 		  endLinkPose.current.elements[13].toFixed(3), ', ',
+      // 		  endLinkPose.current.elements[14].toFixed(3));
+      
+      // obj.getWorldQuaternion(endLinkOrientation);
+      // const pose = baseLinkPoseInv.current.clone().multiply(obj.matrixWorld);
       // console.debug('end-link pose x-axis: '+
       // 		  pose.elements[0].toFixed(3) + ', ' +
       // 		  pose.elements[1].toFixed(3) + ', ' +
@@ -255,29 +295,29 @@ export default function registerAframeComponents(options) {
       // 		  pose.elements[4].toFixed(3) + ', ' +
       // 		  pose.elements[5].toFixed(3) + ', ' +
       // 		  pose.elements[6].toFixed(3) );
-      if (this._my_init_flag) {
-	if (!pose.equals(this.lastPose)) {
-	  // console.debug('end-link Moved !!');
-	  endLinkPose.current.copy(pose);
-	  // // **** debugging output ****
-	  // const position = new THREE.Vector3();
-	  // position.setFromMatrixPosition(pose);
-	  // position.applyMatrix4(world2threeMat); // convert to world coord.
-	  // console.debug("end link position: " + position.x.toFixed(3)
-	  // 	      + ", " + position.y.toFixed(3)
-	  // 	      + ", " + position.z.toFixed(3));
-	  // console.debug("end link position: " + position.x
-	  // 	      + ", " + position.y + ", " + position.z);
-	  // const quat = new THREE.Quaternion();
-	  // quat.setFromRotationMatrix(pose);
-	  // console.debug("end link quat: " + quat.x + ", " + quat.y
-	  // 	      + ", " + quat.z + ", w:" + quat.w);
-	}
-      } else {
-	endLinkPose.current.copy(pose);
-	this._my_init_flag = true;
-      }
-      this.lastPose.copy(pose);
+      // if (this._my_init_flag) {
+      // 	if (!pose.equals(this.lastPose)) {
+      // // console.debug('end-link Moved !!');
+      // // ==== endLinkPose.current.copy(pose); ====
+      // // // **** debugging output ****
+      // // const position = new THREE.Vector3();
+      // // position.setFromMatrixPosition(pose);
+      // // position.applyMatrix4(world2threeMat); // convert to world coord.
+      // // console.debug("end link position: " + position.x.toFixed(3)
+      // // 	      + ", " + position.y.toFixed(3)
+      // // 	      + ", " + position.z.toFixed(3));
+      // // console.debug("end link position: " + position.x
+      // // 	      + ", " + position.y + ", " + position.z);
+      // // const quat = new THREE.Quaternion();
+      // // quat.setFromRotationMatrix(pose);
+      // // console.debug("end link quat: " + quat.x + ", " + quat.y
+      // // 	      + ", " + quat.z + ", w:" + quat.w);
+      // 	}
+      // } else {
+      // 	// ==== endLinkPose.current.copy(pose); ====
+      // 	this._my_init_flag = true;
+      // }
+      // this.lastPose.copy(pose);
     }
   });
 

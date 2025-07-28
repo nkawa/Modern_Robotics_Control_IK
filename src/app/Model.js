@@ -53,19 +53,6 @@ const agilex_piper_Model = (props) => {
                     {/* Tool */}
                     <a-entity gltf-model="#j6_1" position={`${finger_pos} 0 ${L_56+L_ee}`}></a-entity>
                     <a-entity gltf-model="#j6_2" position={`${-finger_pos} 0 ${L_56+L_ee}`}></a-entity>
-                    <a-entity end-link position={`0 0 ${L_56+L_ee}`} rotation={`0 0 -90`}>
-                      <a-sphere 
-                        scale="0.012 0.012 0.012" 
-                        color="yellow"
-                        visible={true}>
-                      </a-sphere>
-                      <a-cylinder position="0      0 -0.015" rotation="90 0  0 "
-                                  height="0.0250" radius="0.0015" color="red" /> 
-                      <a-cylinder position="-0.015 0      0" rotation="0  0 90"
-                                  height="0.0250" radius="0.0015" material="color: #00ff00" />
-                      <a-cylinder position="0      0.025  0" rotation="0  90 0 "
-                                  height="0.0550" radius="0.0015" color="blue" />
-                    </a-entity>
                   </a-entity>
                 </a-entity>
               </a-entity>
@@ -141,19 +128,6 @@ const jaka_zu_5_Model = (props) => {
                 <a-entity j_id="5" gltf-model="#j5" position={`${W_45} ${L_56} 0.0`} rotation={`0 ${theta5-90} 0 `}>
                   {/* J6 */}
                   <a-entity j_id="6" gltf-model="#j6" position={`0 0 0`} rotation={`0 0 ${theta6}`}>
-                    <a-entity end-link position={`0 0 ${L_56+L_ee}`} rotation={`0 0 -90`}>
-                      <a-sphere 
-                        scale="0.012 0.012 0.012" 
-                        color="yellow"
-                        visible={true}>
-                      </a-sphere>
-                      <a-cylinder position="0.035      0  0" rotation="0 0  -90 "
-                                  height="0.070" radius="0.0035" color="red" /> 
-                      <a-cylinder position="0 0.035      0" rotation="0  0 0"
-                                  height="0.0700" radius="0.0035" material="color: #00ff00" />
-                      <a-cylinder position="0      0.0  0.035" rotation="90  0 0 "
-                                  height="0.070" radius="0.0035" color="blue" />
-                    </a-entity>
                     {/* Tool */}
                     <a-entity gltf-model="#j6_1" position='0.01 0 0.15' rotation='0 180 0'> 
                       {/* <a-entity position={`0 0 0`} rotation={`0 0 0`}> */}

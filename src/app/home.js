@@ -171,7 +171,22 @@ export default function DynamicHome(props) {
     set_robotName(get)
   }
 
-  /*** Robot Controller ***/
+  // *** function that set endLinkPose from worker thread
+  const endLinkPoseUpdater = ()=>{
+    if (workerLastPose.current) {
+      const ppw = workerLastPose.current.position;
+      const qqw = workerLastPose.current.quaternion;
+      if (ppw && qqw) {
+	const ppt = new THREE.Vector3(ppw[0], ppw[1], ppw[2]);
+	const qqt = new THREE.Quaternion(qqw[1], qqw[2], qqw[3], qqw[0]);
+	const poseEE = new THREE.Matrix4();
+	poseEE.compose(ppt, qqt, new THREE.Vector3(1, 1, 1));
+	endLinkPose.current = poseEE;
+      }
+    }
+  };
+  // Update last position and orientation
+  //*** Robot Controller ***/
   const [theta_body, setThetaBody] = React.useState(()=>{
     // Initial joint and tool angles
     // const theta_body_initial = [0, 0, 0, 0, 0, 0].map(x=>x*Math.PI/180);
@@ -264,23 +279,40 @@ export default function DynamicHome(props) {
       // 	setThetaBody(workerLastJoints.current);
       // }
     }
-    // Update last position and orientation
     // ** move to theta_body's useEffect **
     let updateStartPose = false;
     if (baseLinkPoseInv.current !== null) {
       if (!trigger_on) {
-	// console.log('change slowRewindMode: ', slowRewindMode);
 	workerRef.current.postMessage({ type: 'slow_rewind',
 					slowRewind: slowRewindMode });
 	updateStartPose = true;
 	controllerMagnificationUsed.current = controllerMagnification.current;
       }
-      if (updateStartPose || endLinkPoseStart.current === null) {
-        endLinkPoseStart.current = three2worldMat.clone()
-	  .multiply(endLinkPose.current);
-        console.debug("endLinkPoseStart: ", endLinkPoseStart.current.elements[12].toFixed(3),
-		      endLinkPoseStart.current.elements[13].toFixed(3),
-		      endLinkPoseStart.current.elements[14].toFixed(3));
+      if (updateStartPose || endLinkPoseStart.current === null){
+	if (workerLastPose.current) {
+	  const ppw = workerLastPose.current.position;
+	  const qqw = workerLastPose.current.quaternion;
+	  // if (ppw && qqw) {
+	  //   console.log('workerLastPose: p: ',
+	  // 		ppw[0].toFixed(3),
+	  // 		ppw[1].toFixed(3),
+	  // 		ppw[2].toFixed(3),
+	  // 		' q: ',
+	  // 		qqw[0].toFixed(3),
+	  // 		qqw[1].toFixed(3),
+	  // 		qqw[2].toFixed(3),
+	  // 		qqw[3].toFixed(3));
+	  // }
+	}
+	// console.log('workerLastStatus: ', workerLastStatus.current);
+	if (workerLastPose.current) {
+          endLinkPoseStart.current = endLinkPose.current.clone();
+          // endLinkPoseStart.current = three2worldMat.clone()
+	  //   .multiply(endLinkPose.current);
+          console.debug("endLinkPoseStart: ", endLinkPoseStart.current.elements[12].toFixed(3),
+			endLinkPoseStart.current.elements[13].toFixed(3),
+			endLinkPoseStart.current.elements[14].toFixed(3));
+	}
       }
       if (updateStartPose || controllerStartInv.current === null) {
         controllerStartInv.current = three2worldMat.clone()
@@ -360,6 +392,7 @@ export default function DynamicHome(props) {
       workerLastJoints,
       setThetaBody,
       endLinkPose,
+      endLinkPoseUpdater,
       baseLinkPoseInv,
       controllerMagnification,
       controllerStartInv,
