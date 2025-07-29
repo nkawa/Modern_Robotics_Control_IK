@@ -25,7 +25,7 @@ export default function registerAframeComponents(options) {
     set_c_pos_x, set_c_pos_y, set_c_pos_z,
     set_c_deg_x, set_c_deg_y, set_c_deg_z,
     vrModeRef,
-    controller_object,
+    // controller_object,
     // Euler_order,
     props,
     onXRFrameMQTT,
@@ -39,6 +39,7 @@ export default function registerAframeComponents(options) {
     setSlowRewindMode,
     controllerModeChange,
     toolPointMove,
+    controllerUpdater,
   } = options;
   
   AFRAME.registerComponent('robot-click', {
@@ -130,6 +131,8 @@ export default function registerAframeComponents(options) {
 	if (evt.detail.y > 0.35) {
 	  toolPointMove(0.001);
 	}
+	controllerUpdater();
+	break;
       }
       this.detail_x_prev = evt.detail.x;
       this.detail_y_prev = evt.detail.y;
@@ -152,6 +155,7 @@ export default function registerAframeComponents(options) {
 	  // console.debug("controller position: " + position.x.toFixed(3)
 	  // 	      + ", " + position.y.toFixed(3)
 	  // 	      + ", " + position.z.toFixed(3));
+	  // controllerUpdater();
 	}
       } else {
 	const controllerBase = baseLinkPoseInv.current.clone().multiply(pose);

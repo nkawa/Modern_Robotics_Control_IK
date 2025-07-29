@@ -225,7 +225,7 @@ self.onmessage = function(event) {
 	  typeof data.endEffectorPoint[0] === 'number' &&
 	  typeof data.endEffectorPoint[1] === 'number' &&
 	  typeof data.endEffectorPoint[2] === 'number') {
-	console.log('Setting end effector point: ', data.endEffectorPoint);
+	console.debug('Setting end effector point: ', data.endEffectorPoint);
 	const endEffectorPosition = makeDoubleVectorG(data.endEffectorPoint);
 	cmdVelGen.setEndEffectorPosition(endEffectorPosition);
 	endEffectorPosition.delete();

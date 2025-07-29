@@ -106,7 +106,11 @@ export default function DynamicHome(props) {
       }
       return toolPoint;
     };});
-
+  // *** updater of the start poses of the end link and controller
+  const [controllerUpdate, setControllerUpdate] = React.useState(0);
+  const [controllerUpdater] = React.useState(() => {
+    return () => { setControllerUpdate(controllerUpdate + 1); };
+  });
   // ****************
   // Animation loop
   const loop = (timestamp)=>{
@@ -146,7 +150,8 @@ export default function DynamicHome(props) {
 	  break;
 	case 'joints':
 	  if (event.data.joints) {
-	    console.debug("Worker message received:", event.data);
+	    console.debug("Worker joint message:",
+			  event.data.joints.map(x => x.toFixed(3)).join(', '));
 	    // Always skip to the latest data
 	    workerLastJoints.current = event.data.joints;
 	  }
@@ -321,10 +326,12 @@ export default function DynamicHome(props) {
       // }
     }
     // ** update the controller and end link pose at the trigger_on change
+    console.log("controllerUpdate: ", controllerUpdate);
     let updateStartPose = false;
     if (baseLinkPoseInv.current !== null) {
       if (!trigger_on) {
-	// ** rewind mode is done when the trigger off
+	// When the trigger off, 
+	//  rewind mode is done if slowRewindMode is true. 
 	workerRef.current.postMessage({ type: 'slow_rewind',
 					slowRewind: slowRewindMode });
 	updateStartPose = true;
@@ -332,6 +339,7 @@ export default function DynamicHome(props) {
       }
       if (updateStartPose || endLinkPoseStart.current === null){
 	// do update start pose of end link
+	console.log("update start pose of end link");
 	if (workerLastPose.current) {
           endLinkPoseStart.current = endLinkPose.current.clone();
           // endLinkPoseStart.current = three2worldMat.clone()
@@ -353,7 +361,9 @@ export default function DynamicHome(props) {
       }
     }
     controllerMagnificationPrev.current = controllerMagnification.current;
-  }, [...controller_object.elements, rendered, trigger_on, slowRewindMode ]);
+  }, [...controller_object.elements,
+      controllerUpdate, rendered, trigger_on, slowRewindMode  
+     ]);
 
   // Gripper Control 
   function clampTool(value) {
@@ -415,7 +425,7 @@ export default function DynamicHome(props) {
       set_c_pos_x, set_c_pos_y, set_c_pos_z,
       set_c_deg_x, set_c_deg_y, set_c_deg_z,
       vrModeRef,
-      controller_object,
+      // controller_object,
       // Euler_order,
       props,
       onXRFrameMQTT,
@@ -429,6 +439,7 @@ export default function DynamicHome(props) {
       setSlowRewindMode,
       controllerModeChange,
       toolPointMove,
+      controllerUpdater
     });
     // set rendered state after a short delay to ensure the scene is ready
     // setTimeout(() => set_rendered(true), 16.5);
