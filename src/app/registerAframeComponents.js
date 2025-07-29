@@ -37,6 +37,8 @@ export default function registerAframeComponents(options) {
     controllerMagnification,
     controllerStartInv,
     setSlowRewindMode,
+    controllerModeChange,
+    toolPointMove,
   } = options;
   
   AFRAME.registerComponent('robot-click', {
@@ -63,23 +65,7 @@ export default function registerAframeComponents(options) {
 	  if (!baseLinkPose.equals(this.el.object3D.matrixWorld)) {
 	    baseLinkPose = this.el.object3D.matrixWorld.clone();
 	    baseLinkPoseInv.current = this.el.object3D.matrixWorld.clone().invert();
-	    // console.log('11 baseLinkPoseInv dialg: ',
-	    // 		baseLinkPoseInv.current.elements[0].toFixed(3), ', ',
-	    // 		baseLinkPoseInv.current.elements[5].toFixed(3), ', ',
-	    // 		baseLinkPoseInv.current.elements[10].toFixed(3));
 	  }
-	// const baseTworld = this.el.object3D.matrixWorld.clone().invert();
-	// if (!baseTworld.equals(baseLinkPoseInv.current)) {
-	//   baseLinkPoseInv.current = baseTworld;
-	//   console.debug('22 baseLinkPoseInv: ', baseLinkPoseInv.current.elements[0].toFixed(3), ', ',
-	// 		baseLinkPoseInv.current.elements[1].toFixed(3), ', ',
-	// 		baseLinkPoseInv.current.elements[2].toFixed(3));
-	//   console.debug('baseLinkPoseInv: ', baseLinkPoseInv.current.elements[4].toFixed(3), ', ',
-	// 		baseLinkPoseInv.current.elements[5].toFixed(3), ', ',
-	// 		baseLinkPoseInv.current.elements[6].toFixed(3));
-	//   console.debug('baseLinkPoseInv: ', baseLinkPoseInv.current.elements[8].toFixed(3), ', ',
-	// 		baseLinkPoseInv.current.elements[9].toFixed(3), ', ',
-	// 		baseLinkPoseInv.current.elements[10].toFixed(3));
 	}
       }
     }
@@ -107,29 +93,45 @@ export default function registerAframeComponents(options) {
       this.el.addEventListener('thumbstickmoved', this.logThumbstick);
       this.lastPose = new THREE.Matrix4();
       this.count = 0;
+      this.detail_x_prev = 0;
       this.detail_y_prev = 0;
     },
     logThumbstick: function (evt) {
-      // thumbStickInfo.current = evt.detail;
-      if (evt.detail.y < 0.5 &&
-	  this.detail_y_prev >= 0.5) {
-	controllerMagnification.current *= 1.41421356237; // sqrt(2)
-	if (controllerMagnification.current > 1) controllerMagnification.current = 1;
-	console.debug("MAGNIFICATION UP", controllerMagnification.current);
+      if (this.detail_x_prev <= 0.35 && evt.detail.x > 0.35) {
+	controllerModeChange(1);
+	console.log("RIGHT", controllerModeChange(0));
       }
-      if (evt.detail.y < -0.35 &&
-	  this.detail_y_prev >= -0.35) {
-	controllerMagnification.current *= 0.70710678118; // 1/sqrt(2)
-	console.debug("MAGNIFICATION RESET", controllerMagnification.current);
+      const controllerMode = controllerModeChange(0);
+      switch (controllerMode) {
+      case 'Normal':
+	if (evt.detail.y < 0.5 &&
+	    this.detail_y_prev >= 0.5) {
+	  controllerMagnification.current *= 1.41421356237; // sqrt(2)
+	  if (controllerMagnification.current > 1)
+	    controllerMagnification.current = 1;
+	  console.debug("MAGNIFICATION UP", controllerMagnification.current);
+	}
+	if (evt.detail.y < -0.35 &&
+	    this.detail_y_prev >= -0.35) {
+	  controllerMagnification.current *= 0.70710678118; // 1/sqrt(2)
+	  console.debug("MAGNIFICATION RESET", controllerMagnification.current);
+	}
+	if (evt.detail.x < -0.35) {
+	  console.log("LEFT", evt.detail.x);
+	  setSlowRewindMode(true);
+	} else {
+	  setSlowRewindMode(false);
+	}
+	break;
+      case 'ToolPoint':
+	if (evt.detail.y < -0.35) {
+	  toolPointMove(-0.001);
+	}
+	if (evt.detail.y > 0.35) {
+	  toolPointMove(0.001);
+	}
       }
-      if (evt.detail.y < -0.35) { console.log("UP", evt.detail.y); }
-      if (evt.detail.x < -0.35) {
-	console.log("LEFT", evt.detail.x);
-	setSlowRewindMode(true);
-      } else {
-	setSlowRewindMode(false);
-      }
-      if (evt.detail.x > 0.35) { console.log("RIGHT", evt.detail.x); }
+      this.detail_x_prev = evt.detail.x;
       this.detail_y_prev = evt.detail.y;
     },
     tick: function () {
@@ -254,8 +256,11 @@ export default function registerAframeComponents(options) {
 
   // ****************
   // Dedicated component for "end-link"
-  // this monitors the end-link pose and sets the useRef variable
-  // when it moves
+  // ****************
+  // tick function calls the endLinkPoseUpdater function
+  // which reads the end-link pose from the worker and
+  // updates the end-link pose useRef variable,
+  // and updates the end-link component's position and orientation
   //
   AFRAME.registerComponent('end-link', {
     init() {
@@ -274,50 +279,6 @@ export default function registerAframeComponents(options) {
       endLinkOrientation.setFromRotationMatrix(endLinkTHREE);
       this.el.object3D.position.copy(endLinkPosition);
       this.el.object3D.quaternion.copy(endLinkOrientation);
-      // console.log('baseLinkPose diagonal: ',
-      // 		  baseLinkPose.elements[0].toFixed(3), ', ',
-      // 		  baseLinkPose.elements[5].toFixed(3), ', ',
-      // 		  baseLinkPose.elements[10].toFixed(3),
-      // 		  ' end-link 3 position: ', endLinkPosition.x.toFixed(3), ', ',
-      // 		  endLinkPosition.y.toFixed(3), ', ',
-      // 		  endLinkPosition.z.toFixed(3),
-      // 		  ' end-link w position: ', endLinkPose.current.elements[12].toFixed(3), ', ',
-      // 		  endLinkPose.current.elements[13].toFixed(3), ', ',
-      // 		  endLinkPose.current.elements[14].toFixed(3));
-      
-      // obj.getWorldQuaternion(endLinkOrientation);
-      // const pose = baseLinkPoseInv.current.clone().multiply(obj.matrixWorld);
-      // console.debug('end-link pose x-axis: '+
-      // 		  pose.elements[0].toFixed(3) + ', ' +
-      // 		  pose.elements[1].toFixed(3) + ', ' +
-      // 		  pose.elements[2].toFixed(3) +
-      // 		  ', y-axis: ' +
-      // 		  pose.elements[4].toFixed(3) + ', ' +
-      // 		  pose.elements[5].toFixed(3) + ', ' +
-      // 		  pose.elements[6].toFixed(3) );
-      // if (this._my_init_flag) {
-      // 	if (!pose.equals(this.lastPose)) {
-      // // console.debug('end-link Moved !!');
-      // // ==== endLinkPose.current.copy(pose); ====
-      // // // **** debugging output ****
-      // // const position = new THREE.Vector3();
-      // // position.setFromMatrixPosition(pose);
-      // // position.applyMatrix4(world2threeMat); // convert to world coord.
-      // // console.debug("end link position: " + position.x.toFixed(3)
-      // // 	      + ", " + position.y.toFixed(3)
-      // // 	      + ", " + position.z.toFixed(3));
-      // // console.debug("end link position: " + position.x
-      // // 	      + ", " + position.y + ", " + position.z);
-      // // const quat = new THREE.Quaternion();
-      // // quat.setFromRotationMatrix(pose);
-      // // console.debug("end link quat: " + quat.x + ", " + quat.y
-      // // 	      + ", " + quat.z + ", w:" + quat.w);
-      // 	}
-      // } else {
-      // 	// ==== endLinkPose.current.copy(pose); ====
-      // 	this._my_init_flag = true;
-      // }
-      // this.lastPose.copy(pose);
     }
   });
 

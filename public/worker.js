@@ -211,6 +211,32 @@ self.onmessage = function(event) {
       }
     }
     break;
+  case 'set_end_effector_point':
+    // workerStateとsubStateが何のときに可能とするかは未定
+    if (data.endEffectorPoint && makeDoubleVectorG) {
+      // if (data.endEffectorPoint === null) {
+      // 	const ee = cmdVelGen.getEndEffectorPosition();
+      // 	const endEffectorPoint = [ee.get(0), ee.get(1), ee.get(2)];
+      // 	ee.delete();
+      // 	self.postMessage({type: 'end_effector_point',
+      // 			  endEffectorPoint: endEffectorPoint});
+      // }
+      if (data.endEffectorPoint.length === 3 &&
+	  typeof data.endEffectorPoint[0] === 'number' &&
+	  typeof data.endEffectorPoint[1] === 'number' &&
+	  typeof data.endEffectorPoint[2] === 'number') {
+	console.log('Setting end effector point: ', data.endEffectorPoint);
+	const endEffectorPosition = makeDoubleVectorG(data.endEffectorPoint);
+	cmdVelGen.setEndEffectorPosition(endEffectorPosition);
+	endEffectorPosition.delete();
+	const tmp = subState;
+	subState = sst.moving; // アームをee移動分だけ動かすために一回呼ぶ
+	controllerTfVec = []; // 現在値をゴールにしてcalcVelocityPQを1回実行する
+	mainFunc(0); // ここでeeの位置を更新
+	subState = tmp; // 元の状態に戻す
+      }
+    }
+    break;
   case 'set_exact_solution':
     if (workerState === st.generatorReady || workerState === st.slrmReady) {
       if (data.exactSolution !== undefined) {
@@ -251,6 +277,7 @@ function mainFunc(timeStep) {
 	joints[i] = res[i].x;
 	velocities[i] = res[i].v;
       }
+      controllerTfVec = []; // 現在値をゴールにしてcalcVelocityPQを1回実行する
     } else if (subState === sst.converged) {
       velocities.fill(0); // sst.rewindingから出た時に必要
     }

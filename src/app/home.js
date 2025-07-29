@@ -77,6 +77,37 @@ export default function DynamicHome(props) {
   const endLinkPoseStart = React.useRef(null);
   const baseLinkPoseInv = React.useRef(null);
   const controllerStartInv = React.useRef(null);
+  //*** controller mode change functions
+  const [controllerModeChange] = React.useState(() => {
+    let modeNumber = 0;
+    const controllerMode = ['Normal', 'ToolPoint'];
+    return (incr) => {
+      modeNumber += incr;
+      if (modeNumber < 0) {
+	modeNumber = controllerMode.length - 1;
+      } else if (modeNumber >= controllerMode.length) {
+	modeNumber = 0;
+      }
+      console.debug("Controller Mode changed to: ", controllerMode[modeNumber]);
+      return controllerMode[modeNumber];
+    };
+  });
+  // *** function that sets the end effector point in the worker thread
+  const [toolPointMove] = React.useState(() => {
+    let toolPoint = new THREE.Vector3(0, 0, 0);
+    return (delta) => {
+      if (typeof delta === 'number') {
+	toolPoint.z += delta;
+	workerRef.current
+	  .postMessage({type: 'set_end_effector_point',
+			endEffectorPoint: toolPoint.toArray()});
+	console.debug("Tool Point moved to: ", toolPoint.x.toFixed(3),
+		      toolPoint.y.toFixed(3), toolPoint.z.toFixed(3));
+      }
+      return toolPoint;
+    };});
+
+  // ****************
   // Animation loop
   const loop = (timestamp)=>{
     reqIdRef.current = window.requestAnimationFrame(loop) 
@@ -85,6 +116,7 @@ export default function DynamicHome(props) {
     loop()
     return () => window.cancelAnimationFrame(reqIdRef.current) 
   },[])
+  // ****************
   // Worker thread generation
   const workerRef = React.useRef(null);
   const workerLastJoints = React.useRef(null);
@@ -130,17 +162,25 @@ export default function DynamicHome(props) {
     }
     // **** set status text to "dsp_message" ****
     const intervalId = setInterval(() => {
-      // const statusText = 'line1'+'\n'+'line2\nline3';
-      const statusText =
-	    'status: ' + workerLastStatus.current?.status +
-	    '  magnification: ' + controllerMagnificationUsed.current.toFixed(2) +
-	    '\n' +
-	    ' cond:' + workerLastStatus.current?.condition_number.toFixed(2) +
-	    '  manip:'  + workerLastStatus.current?.manipulability.toFixed(3) +
-	    '  k:'  + workerLastStatus.current?.sensitivity_scale.toFixed(3) +
-	    + ' ' + '\n' +
-	    '  limit flags: ' + (workerLastStatus.current?.limit_flag || []).join(', ');
-      set_dsp_message(statusText);
+      const controllerMode = controllerModeChange(0); // Get current controller mode
+      const messageText = ['MODE: ' + controllerMode];
+      switch (controllerMode) {
+      case 'Normal':
+	messageText
+	  .push('status: ' + workerLastStatus.current?.status +
+		'  magnification: ' + controllerMagnificationUsed.current.toFixed(2),
+		'cond:' + workerLastStatus.current?.condition_number.toFixed(2) +
+		'  manip:'  + workerLastStatus.current?.manipulability.toFixed(3) +
+		'  k:'  + workerLastStatus.current?.sensitivity_scale.toFixed(3),
+		'  limit flags: ' +
+		(workerLastStatus.current?.limit_flag || []).join(', '));
+	break;
+      case 'ToolPoint':
+	messageText.push('Tool Point: ' + toolPointMove(null).toArray().
+			 map(x => x.toFixed(3)).join(', '));
+	break;
+      } 
+      set_dsp_message(messageText.join('\n'));
       if (workerLastStatus.current?.sensitivity_scale > 0.001) {
 	dsp_color.current = 'orange'; // Orange color for singularity warning
       } else if (workerLastStatus.current?.limit_flag.map(x=>x*x).reduce((sum,x)=>sum+x,0) > 0) {
@@ -157,8 +197,9 @@ export default function DynamicHome(props) {
       }
       clearInterval(intervalId);
     };
-  }, []);
+  }, [robot_model]);
 
+  // ****************
   // Change Robot
   const robotChange = ()=>{
     const get = (robotName)=>{
@@ -172,25 +213,24 @@ export default function DynamicHome(props) {
   }
 
   // *** function that set endLinkPose from worker thread
-  const endLinkPoseUpdater = ()=>{
-    if (workerLastPose.current) {
-      const ppw = workerLastPose.current.position;
-      const qqw = workerLastPose.current.quaternion;
-      if (ppw && qqw) {
-	const ppt = new THREE.Vector3(ppw[0], ppw[1], ppw[2]);
-	const qqt = new THREE.Quaternion(qqw[1], qqw[2], qqw[3], qqw[0]);
-	const poseEE = new THREE.Matrix4();
-	poseEE.compose(ppt, qqt, new THREE.Vector3(1, 1, 1));
-	endLinkPose.current = poseEE;
+  const [endLinkPoseUpdater] = React.useState(()=>{
+    return ()=>{
+      if (workerLastPose.current) {
+	const ppw = workerLastPose.current.position;
+	const qqw = workerLastPose.current.quaternion;
+	if (ppw && qqw) {
+	  const ppt = new THREE.Vector3(ppw[0], ppw[1], ppw[2]);
+	  const qqt = new THREE.Quaternion(qqw[1], qqw[2], qqw[3], qqw[0]);
+	  const poseEE = new THREE.Matrix4();
+	  poseEE.compose(ppt, qqt, new THREE.Vector3(1, 1, 1));
+	  endLinkPose.current = poseEE;
+	}
       }
-    }
-  };
-  // Update last position and orientation
+    };});
+
   //*** Robot Controller ***/
   const [theta_body, setThetaBody] = React.useState(()=>{
     // Initial joint and tool angles
-    // const theta_body_initial = [0, 0, 0, 0, 0, 0].map(x=>x*Math.PI/180);
-    // const theta_body_initial = [180, 90, 0, 90, 180, 0].map(x=>x*Math.PI/180);
     // **** piper
     // const theta_body_initial = [0, -15, 82.6, 0, 70, 0].map(x=>x*Math.PI/180);
     // **** jaka_zu_5 initial angles
@@ -223,6 +263,7 @@ export default function DynamicHome(props) {
   const controllerMagnification = React.useRef(1.0);
   const controllerMagnificationPrev = React.useRef(controllerMagnification.current);
   const controllerMagnificationUsed = React.useRef(controllerMagnification.current);
+  // *** a function that runs when the controller pose changes
   React.useEffect(() => {
     // VR input period
     if (endLinkPoseStart.current !== null &&
@@ -279,45 +320,34 @@ export default function DynamicHome(props) {
       // 	setThetaBody(workerLastJoints.current);
       // }
     }
-    // ** move to theta_body's useEffect **
+    // ** update the controller and end link pose at the trigger_on change
     let updateStartPose = false;
     if (baseLinkPoseInv.current !== null) {
       if (!trigger_on) {
+	// ** rewind mode is done when the trigger off
 	workerRef.current.postMessage({ type: 'slow_rewind',
 					slowRewind: slowRewindMode });
 	updateStartPose = true;
 	controllerMagnificationUsed.current = controllerMagnification.current;
       }
       if (updateStartPose || endLinkPoseStart.current === null){
-	if (workerLastPose.current) {
-	  const ppw = workerLastPose.current.position;
-	  const qqw = workerLastPose.current.quaternion;
-	  // if (ppw && qqw) {
-	  //   console.log('workerLastPose: p: ',
-	  // 		ppw[0].toFixed(3),
-	  // 		ppw[1].toFixed(3),
-	  // 		ppw[2].toFixed(3),
-	  // 		' q: ',
-	  // 		qqw[0].toFixed(3),
-	  // 		qqw[1].toFixed(3),
-	  // 		qqw[2].toFixed(3),
-	  // 		qqw[3].toFixed(3));
-	  // }
-	}
-	// console.log('workerLastStatus: ', workerLastStatus.current);
+	// do update start pose of end link
 	if (workerLastPose.current) {
           endLinkPoseStart.current = endLinkPose.current.clone();
           // endLinkPoseStart.current = three2worldMat.clone()
 	  //   .multiply(endLinkPose.current);
-          console.debug("endLinkPoseStart: ", endLinkPoseStart.current.elements[12].toFixed(3),
+          console.debug("endLinkPoseStart: ",
+			endLinkPoseStart.current.elements[12].toFixed(3),
 			endLinkPoseStart.current.elements[13].toFixed(3),
 			endLinkPoseStart.current.elements[14].toFixed(3));
 	}
       }
       if (updateStartPose || controllerStartInv.current === null) {
+	// do update start pose of controller
         controllerStartInv.current = three2worldMat.clone()
 	  .multiply(controller_object).invert();
-        console.debug("controllerStartInv: ", controllerStartInv.current.elements[12].toFixed(3),
+        console.debug("controllerStartInv: ",
+		      controllerStartInv.current.elements[12].toFixed(3),
 		      controllerStartInv.current.elements[13].toFixed(3),
 		      controllerStartInv.current.elements[14].toFixed(3));
       }
@@ -397,6 +427,8 @@ export default function DynamicHome(props) {
       controllerMagnification,
       controllerStartInv,
       setSlowRewindMode,
+      controllerModeChange,
+      toolPointMove,
     });
     // set rendered state after a short delay to ensure the scene is ready
     // setTimeout(() => set_rendered(true), 16.5);
