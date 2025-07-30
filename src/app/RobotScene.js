@@ -60,6 +60,26 @@ export default function RobotScene(props) {
         	  height={cyl_hight} radius={cyl_radius} color="blue" />
     </a-entity>
   );
+  // definition of the end link axes marker
+  const con_axis_length = 0.100;
+  const con_length = (con_axis_length/2).toString();
+  const con_hight = (con_axis_length).toString();
+  const con_radius = '0.0035';
+  const controller_axes = (
+    <a-entity axes1 position={'0 1 0'} >
+      <a-sphere
+        scale="0.012 0.012 0.012"
+        color="white"
+        visible={true}>
+      </a-sphere>
+      <a-cylinder position={`${con_length} 0 0`} rotation={`0 0 -90`}
+        	  height={con_hight} radius={con_radius} color="red" />
+      <a-cylinder position={`0 ${con_length} 0`} rotation={`0 0 0`}
+		  height={con_hight} radius={con_radius} material='color: #00ff00' />
+      <a-cylinder position={`0 0 ${con_length}`} rotation={`90 0 0`}
+        	  height={con_hight} radius={con_radius} color="blue" />
+    </a-entity>
+  );
   // console.log("dsp_message: ", dsp_message);
   return (
     <>
@@ -112,6 +132,7 @@ export default function RobotScene(props) {
         {/* End Link */}
         {end_link}
 	{/* End Link Axes */}
+        {controller_axes}
       </a-scene>
       <Controller {...controllerProps}/>
       <div className="footer">

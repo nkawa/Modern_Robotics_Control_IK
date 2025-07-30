@@ -80,7 +80,7 @@ const jaka_zu_5_Model = (props) => {
   const { theta_body = [0,0,0,0,0,0], theta_tool = 24 ,controllerQuat} = props;
   const [theta1, theta2, theta3, theta4, theta5, theta6] =
         urdf2mrJoints(theta_body).map(rad2deg);
-  const L_01 = 0.12015, L_23 = 0.43, L_34 = 0.3685, W_45 = 0.114, L_56 = 0.1135, L_ee = -0.0065
+  const L_01 = 0.12015, L_23 = 0.43, L_34 = 0.3685, W_45 = 0.114, L_56 = 0.1135, L_ee = -0.0065;
   const thetaF=-20 + theta_tool;
   const thetaF2a=thetaF+180;
   const thetaF2b=-thetaF-180;
@@ -100,20 +100,6 @@ const jaka_zu_5_Model = (props) => {
         visible="False"
       ></a-plane>
 
-      <a-entity axes1 position={'0 1 0'} >
-        <a-sphere
-          scale="0.012 0.012 0.012"
-          color="white"
-          visible={true}>
-        </a-sphere>
-        <a-cylinder position="0.05      0  0" rotation="0 0  -90 "
-                    height="0.10" radius="0.0035" color="red" />
-        <a-cylinder position="0 0.05      0" rotation="0  0 0"
-                    height="0.10" radius="0.0035" material="color: #00ff00" />
-        <a-cylinder position="0      0.0  0.05" rotation="90  0 0 "
-                    height="0.10" radius="0.0035" color="blue" />
-      </a-entity>
-
       {/* Robot Base */}
       <a-entity robot-click="" gltf-model="#base" position={'0 0 0'} rotation={`0 -180 0`} visible="true">
         {/* J1 */}
@@ -130,14 +116,7 @@ const jaka_zu_5_Model = (props) => {
                   <a-entity j_id="6" gltf-model="#j6" position={`0 0 0`} rotation={`0 0 ${theta6}`}>
                     {/* Tool */}
                     <a-entity gltf-model="#j6_1" position='0.01 0 0.15' rotation='0 180 0'> 
-                      {/* <a-entity position={`0 0 0`} rotation={`0 0 0`}> */}
-                      {/*   <a-cylinder position="0.035      0  0" rotation="0 0  -90 " */}
-                      {/*               height="0.070" radius="0.0035" color="red" />  */}
-                      {/*   <a-cylinder position="0 0.035      0" rotation="0  0 0" */}
-                      {/*               height="0.0700" radius="0.0035" material="color: #00ff00" /> */}
-                      {/*   <a-cylinder position="0      0.0  0.035" rotation="90  0 0 " */}
-                      {/*               height="0.070" radius="0.0035" color="blue" /> */}
-                      {/* </a-entity> */}
+                      {/* AG-160-90 hand */}
                       <a-entity gltf-model='#j6_2a' position='-0.02 0 -0.06' rotation={`0 ${thetaF2a}  0` }>
                         <a-entity gltf-model='#j6_4a' position='0.0 0 0.055' rotation={`180 ${thetaF3a}  0` }>
                           <a-entity gltf-model='#j6_3b' position='-0.0 0 -0.02' rotation={`0 180 -90` }>
@@ -167,15 +146,18 @@ const robotModelMap = {'jaka_zu_5': jaka_zu_5_Model,
                        'agilex_piper': agilex_piper_Model};
 
 const Select_Robot = (props)=>{
-  const {robotNameList, robotName, ...rotateProps} = props;
+  const {updateRobot, robotNameList, robotName, ...rotateProps} = props;
   const visibletable = robotNameList.map(()=>false);
   const findindex = robotNameList.findIndex((e)=>e===robotName);
   if(findindex >= 0){
     visibletable[findindex] = true;
   }
-  let Model = robotModelMap[robotName];
+  const Model = React.useRef(robotModelMap[robotName]);
+  React.useEffect(() => {
+    Model.current = robotModelMap[robotName];
+  }, [updateRobot]);
   return (<>
-    <Model visible={visibletable[0]} {...rotateProps}/>
+    <Model.current visible={visibletable[0]} {...rotateProps}/>
   </>);
 }
 

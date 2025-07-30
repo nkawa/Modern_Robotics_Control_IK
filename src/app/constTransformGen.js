@@ -34,17 +34,17 @@ const deg180 = Math.PI; // 180度をラジアンに変換
 
 // In the Jaka robot, the joint angles 0...0 of the URDF
 // are the joint angles 180,90,0,90,180 of the ModernRobotics system
-export function mr2urdfJoints(mrJoints) {
-  const ud = [
-    mrJoints[0],
-    mrJoints[1] + deg90,
-    mrJoints[2],
-    mrJoints[3] + deg90,
-    mrJoints[4],
-    mrJoints[5] + deg90
-  ];
-  return ud;
-}
+// export function mr2urdfJoints(mrJoints) {
+//   const ud = [
+//     mrJoints[0],
+//     mrJoints[1] + deg90,
+//     mrJoints[2],
+//     mrJoints[3] + deg90,
+//     mrJoints[4],
+//     mrJoints[5] + deg90
+//   ];
+//   return ud;
+// }
 // In the Jaka robot, the joint angles 0...0 of the ModernRobotics system
 // are the joint angles 180,90,0,90,180 of the URDF
 // export function urdf2mrJoints(udJoints) {
