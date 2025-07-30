@@ -38,7 +38,7 @@ export default function registerAframeComponents(options) {
     controllerStartInv,
     setSlowRewindMode,
     controllerModeChange,
-    toolPointMove,
+    toolPointMover,
     controllerUpdater,
   } = options;
   
@@ -126,10 +126,10 @@ export default function registerAframeComponents(options) {
 	break;
       case 'ToolPoint':
 	if (evt.detail.y < -0.35) {
-	  toolPointMove(-0.001);
+	  toolPointMover(-0.001);
 	}
 	if (evt.detail.y > 0.35) {
-	  toolPointMove(0.001);
+	  toolPointMover(0.001);
 	}
 	controllerUpdater();
 	break;

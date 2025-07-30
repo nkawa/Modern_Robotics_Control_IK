@@ -101,7 +101,7 @@ export default function DynamicHome(props) {
     };
   });
   // *** function that sets the end effector point in the worker thread
-  const [toolPointMove] = React.useState(() => {
+  const [toolPointMover] = React.useState(() => {
     let toolPoint = new THREE.Vector3(0, 0, 0);
     return (delta) => {
       if (typeof delta === 'number') {
@@ -111,6 +111,9 @@ export default function DynamicHome(props) {
 			endEffectorPoint: toolPoint.toArray()});
 	console.debug("Tool Point moved to: ", toolPoint.x.toFixed(3),
 		      toolPoint.y.toFixed(3), toolPoint.z.toFixed(3));
+      } else if (delta === null) {
+	// reset
+	toolPoint.x = 0; toolPoint.y = 0; toolPoint.z = 0;
       }
       return toolPoint;
     };});
@@ -152,6 +155,7 @@ export default function DynamicHome(props) {
   React.useEffect(() => {
     setThetaBody(theta_body_initial_map[robot_model] || [0, 0, 0, 0, 0, 0]);
     setThetaTool(0);
+    toolPointMover(null);
     setUpdateRobot(updateRobot+1);
   }, [robot_model]);
 
@@ -219,7 +223,7 @@ export default function DynamicHome(props) {
 		(workerLastStatus.current?.limit_flag || []).join(', '));
 	break;
       case 'ToolPoint':
-	messageText.push('Tool Point: ' + toolPointMove(null).toArray().
+	messageText.push('Tool Point: ' + toolPointMover(0).toArray().
 			 map(x => x.toFixed(3)).join(', '));
 	break;
       } 
@@ -449,7 +453,7 @@ export default function DynamicHome(props) {
       controllerStartInv,
       setSlowRewindMode,
       controllerModeChange,
-      toolPointMove,
+      toolPointMover,
       controllerUpdater
     });
     // set rendered state after a short delay to ensure the scene is ready
