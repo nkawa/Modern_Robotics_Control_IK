@@ -1,6 +1,6 @@
 {
-  "name": "PiPER-control",
-  "version": "0.1.1",
+  "name": "JAKA-control",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,7 +13,7 @@
     "aframe": "1.6",
     "bootstrap": "^5.3.3",
     "mqtt": "^5.10.4",
-    "next": "15.4.3",
+    "next": "15.4.5",
     "numeric": "^1.2.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
