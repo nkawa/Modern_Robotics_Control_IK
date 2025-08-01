@@ -57,11 +57,19 @@ export default function DynamicHome(props) {
   const robotIDRef = React.useRef("none"); // 
 //  console.log("robotIDRef:", robotIDRef.current, "id:", idtopic);
   // VR camera pose
-  const [c_pos_x, set_c_pos_x] = React.useState(0.23)
-  const [c_pos_y, set_c_pos_y] = React.useState(0.3)
-  const [c_pos_z, set_c_pos_z] = React.useState(-0.6)
+  //      set_c_pos_x(0);
+   //     set_c_pos_y(-0.6);
+   //     set_c_pos_z(0.90);
+   //     set_c_deg_x(0);
+ //       set_c_deg_y(0);
+   //     set_c_deg_z(0);
+
+
+  const [c_pos_x, set_c_pos_x] = React.useState(0)
+  const [c_pos_y, set_c_pos_y] = React.useState(0.5)
+  const [c_pos_z, set_c_pos_z] = React.useState(0.9)
   const [c_deg_x, set_c_deg_x] = React.useState(0)
-  const [c_deg_y, set_c_deg_y] = React.useState(150)
+  const [c_deg_y, set_c_deg_y] = React.useState(0)
   const [c_deg_z, set_c_deg_z] = React.useState(0)
 
   const [updateRobot, setUpdateRobot] = React.useState(0)

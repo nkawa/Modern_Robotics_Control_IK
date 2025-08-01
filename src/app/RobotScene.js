@@ -4,15 +4,15 @@ import { Select_Robot } from './Model';
 import Controller from './webcontroller.js';
 
 const Line = (props) => {
-  const { pos1={x:0,y:0,z:0}, pos2={x:0,y:0,z:0}, color="magenta", opa=1, visible=false, ...otherprops } = props;
+  const { pos1 = { x: 0, y: 0, z: 0 }, pos2 = { x: 0, y: 0, z: 0 }, color = "magenta", opa = 1, visible = false, ...otherprops } = props;
 
   const line_para = `start: ${pos1.x} ${pos1.y} ${pos1.z}; end: ${pos2.x} ${pos2.y} ${pos2.z}; color: ${color}; opacity: ${opa};`
 
   return <a-entity
-      {...otherprops}
-      line={line_para}
-      position={`0 0 0`}
-      visible={`${visible}`}
+    {...otherprops}
+    line={line_para}
+    position={`0 0 0`}
+    visible={`${visible}`}
   ></a-entity>
 }
 
@@ -21,7 +21,7 @@ export default function RobotScene(props) {
     robot_model, rendered, robotProps, controllerProps,
     theta_tool,
     dsp_message, dsp_color,
-    c_pos_x, c_pos_y, c_pos_z, c_deg_x, c_deg_y, c_deg_z, 
+    c_pos_x, c_pos_y, c_pos_z, c_deg_x, c_deg_y, c_deg_z,
     // position_ee, euler_ee, 
     // vr_controller_pos, vr_controller_euler,
   } = props;
@@ -31,15 +31,15 @@ export default function RobotScene(props) {
 
   if (!rendered) {
     return (
-      <a-scene xr-mode-ui="XRMode: ar">
-        <Assets robot_model={robot_model} viewer={props.viewer}/>
+      <a-scene xr-mode-ui="XRMode: xr">
+        <Assets robot_model={robot_model} appmode={props.appmode} />
       </a-scene>
     );
-    }
+  }
 
   // definition of the end link axes marker
   const axis_length = 0.210;
-  const cyl_length = (axis_length/2).toString();
+  const cyl_length = (axis_length / 2).toString();
   const cyl_hight = (axis_length).toString();
   const cyl_radius = '0.0035';
   const origin_marker_radius = '0.012';
@@ -47,22 +47,22 @@ export default function RobotScene(props) {
   const origin_marker_color = 'blue';
   const end_link = (
     <a-entity end-link position={`0 0 0`} rotation={`0 0 0`}>
-      <a-sphere 
-	scale={origin_marker_size}
-	color={origin_marker_color}
-	visible={true}>
+      <a-sphere
+        scale={origin_marker_size}
+        color={origin_marker_color}
+        visible={true}>
       </a-sphere>
       <a-cylinder position={`${cyl_length} 0 0`} rotation={`0 0 -90`}
-        	  height={cyl_hight} radius={cyl_radius} color="red" />
+        height={cyl_hight} radius={cyl_radius} color="red" />
       <a-cylinder position={`0 ${cyl_length} 0`} rotation={`0 0 0`}
-		  height={cyl_hight} radius={cyl_radius} material='color: #00ff00' />
+        height={cyl_hight} radius={cyl_radius} material='color: #00ff00' />
       <a-cylinder position={`0 0 ${cyl_length}`} rotation={`90 0 0`}
-        	  height={cyl_hight} radius={cyl_radius} color="blue" />
+        height={cyl_hight} radius={cyl_radius} color="blue" />
     </a-entity>
   );
   // definition of the end link axes marker
   const con_axis_length = 0.100;
-  const con_length = (con_axis_length/2).toString();
+  const con_length = (con_axis_length / 2).toString();
   const con_hight = (con_axis_length).toString();
   const con_radius = '0.0035';
   const controller_axes = (
@@ -73,11 +73,11 @@ export default function RobotScene(props) {
         visible={true}>
       </a-sphere>
       <a-cylinder position={`${con_length} 0 0`} rotation={`0 0 -90`}
-        	  height={con_hight} radius={con_radius} color="red" />
+        height={con_hight} radius={con_radius} color="red" />
       <a-cylinder position={`0 ${con_length} 0`} rotation={`0 0 0`}
-		  height={con_hight} radius={con_radius} material='color: #00ff00' />
+        height={con_hight} radius={con_radius} material='color: #00ff00' />
       <a-cylinder position={`0 0 ${con_length}`} rotation={`90 0 0`}
-        	  height={con_hight} radius={con_radius} color="blue" />
+        height={con_hight} radius={con_radius} color="blue" />
     </a-entity>
   );
   // console.log("dsp_message: ", dsp_message);
@@ -87,10 +87,10 @@ export default function RobotScene(props) {
         {/* VR Controller */}
         <a-entity oculus-touch-controls="hand: right" vr-controller-right visible={true}></a-entity>
 
-        <Assets robot_model={robot_model} viewer={props.viewer} monitor={props.monitor}/>
+        <Assets robot_model={robot_model} viewer={props.viewer} monitor={props.monitor} />
 
         {/* Robot */}
-        <Select_Robot {...robotProps}/>
+        <Select_Robot {...robotProps} />
         {/* Light */}
         <a-entity light="type: directional; color: #FFF; intensity: 0.25" position="1 1 1"></a-entity>
         <a-entity light="type: directional; color: #FFF; intensity: 0.25" position="-1 1 1"></a-entity>
@@ -107,8 +107,8 @@ export default function RobotScene(props) {
             />
           </a-camera>
         </a-entity>
-          {/* VR Controller Pose */}
-          {/* <a-square 
+        {/* VR Controller Pose */}
+        {/* <a-square 
             position={`${vr_controller_pos[0]} ${vr_controller_pos[1]} ${vr_controller_pos[2]}`} 
             rotation={`${vr_controller_euler[0]} ${vr_controller_euler[1]} ${vr_controller_euler[2]}`}
             color="green" 
@@ -124,20 +124,22 @@ export default function RobotScene(props) {
           </a-entity> */}
 
 
-          {/* World Space */}
-          {/* <Line pos1={{x:0,y:0,z:0}} pos2={{x:0,y:0,z:0.2}} color="blue" visible={true} /> 
+        {/* World Space */}
+        {/* <Line pos1={{x:0,y:0,z:0}} pos2={{x:0,y:0,z:0.2}} color="blue" visible={true} /> 
           <Line pos1={{x:0,y:0,z:0}} pos2={{x:0.2,y:0,z:0}} color="red" visible={true} />   
           <Line pos1={{x:0,y:0,z:0}} pos2={{x:0,y:0.2,z:0}}  color="green" visible={true} />  */}
-         
+
         {/* End Link */}
         {end_link}
-	{/* End Link Axes */}
+        {/* End Link Axes */}
         {controller_axes}
       </a-scene>
-      <Controller {...controllerProps}/>
-      <div className="footer">
+      {/*     <Controller {...controllerProps} />       
+       <div className="footer">
         <div>{`add information here`}</div>
       </div>
+      */
+      }
     </>
   );
 }
