@@ -37,6 +37,7 @@ export default function registerAframeComponents(options) {
     baseLinkPoseInv,
     controllerMagnification,
     controllerStartInv,
+    onAnimationMQTT,
     setSlowRewindMode,
     controllerModeChange,
     toolPointMover,

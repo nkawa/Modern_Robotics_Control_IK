@@ -488,6 +488,7 @@ export default function DynamicHome(props) {
       baseLinkPoseInv,
       controllerMagnification,
       controllerStartInv,
+      onAnimationMQTT,
       setSlowRewindMode,
       controllerModeChange,
       toolPointMover,
