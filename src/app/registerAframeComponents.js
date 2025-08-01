@@ -137,7 +137,7 @@ export default function registerAframeComponents(options) {
       }
       this.detail_x_prev = evt.detail.x;
       this.detail_y_prev = evt.detail.y;
-      
+
     },
     tick: function () {
       const obj = this.el.object3D;
@@ -215,6 +215,35 @@ export default function registerAframeComponents(options) {
     }
   });
 
+  // set model opacity
+
+  if (!('model-opacity' in AFRAME.components)) { // モデルを透明にするための仕組み
+    AFRAME.registerComponent("model-opacity", {
+      schema: {
+        opacity: { type: "number", default: 0.5 }
+      },
+      init: function () {
+        this.el.addEventListener("model-loaded", this.update.bind(this));
+      },
+      update: function () {
+        var mesh = this.el.getObject3D("mesh");
+        var data = this.data;
+        if (!mesh || !data) {
+          return;
+        }
+        mesh.traverse(function (node) {
+          if (node.isMesh) {
+            node.material.opacity = data.opacity;
+            node.material.transparent = data.opacity < 1.0;
+            node.material.needsUpdate = true;
+            //                  node.material.format = THREE.RGBAFormat;
+          }
+        });
+      }
+    });
+  }
+
+
   // Start animation in VR scene
   AFRAME.registerComponent('scene', {
     init: function () {
@@ -247,11 +276,11 @@ export default function registerAframeComponents(options) {
           setThetaBody(workerLastJoints.current);
 
         }
-/*        console.debug('workerLastJoints: '
-          + workerLastJoints.current[0].toFixed(3) + ', '
-          + workerLastJoints.current[1].toFixed(3) + ', '
-          + workerLastJoints.current[2].toFixed(3));
-          */
+        /*        console.debug('workerLastJoints: '
+                  + workerLastJoints.current[0].toFixed(3) + ', '
+                  + workerLastJoints.current[1].toFixed(3) + ', '
+                  + workerLastJoints.current[2].toFixed(3));
+                  */
       }
     }
   });

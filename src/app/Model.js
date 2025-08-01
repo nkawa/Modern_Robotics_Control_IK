@@ -24,6 +24,7 @@ const agilex_piper_Model = (props) => {
 
   const finger_pos = (((theta_tool)*0.4) / 1000)+0.0004;
 
+  const opacity = 0.8;
   return (
     <>
       {/* Plane */}
@@ -37,22 +38,22 @@ const agilex_piper_Model = (props) => {
       ></a-plane>
 
       {/* Robot Base */}
-      <a-entity robot-click="" gltf-model="#base" position={'0 0 0'} visible="true">
+      <a-entity robot-click="" gltf-model="#base" position={'0 0 0'} visible="true" model-opacity={opacity}>
         {/* J1 */}
-        <a-entity j_id="1" gltf-model="#j1" position={'0 0 0'} rotation={`0 ${theta1-180} 0`}>
+        <a-entity j_id="1" gltf-model="#j1" position={'0 0 0'} rotation={`0 ${theta1-180} 0`} model-opacity={opacity}>
           {/* J2 */}
-          <a-entity j_id="2" gltf-model="#j2" position={`0 ${L_01} 0`} rotation={`${theta2} 0 0`}>
+          <a-entity j_id="2" gltf-model="#j2" position={`0 ${L_01} 0`} rotation={`${theta2} 0 0`} model-opacity={opacity}>
             {/* J3 */}
-            <a-entity j_id="3" gltf-model="#j3" position={`0 ${L_23} 0`} rotation={`${theta3} 0 0`}>
+            <a-entity j_id="3" gltf-model="#j3" position={`0 ${L_23} 0`} rotation={`${theta3} 0 0`} model-opacity={opacity}>
               {/* J4 */}
-              <a-entity j_id="4" gltf-model="#j4" position={`0 ${L_34} -${W_34}`} rotation={`0 ${theta4} 0`}>
+              <a-entity j_id="4" gltf-model="#j4" position={`0 ${L_34} -${W_34}`} rotation={`0 ${theta4} 0`} model-opacity={opacity}>
                 {/* J5 */}
-                <a-entity j_id="5" gltf-model="#j5" position={`0 0 0`} rotation={`${theta5-90} 0 0`}>
+                <a-entity j_id="5" gltf-model="#j5" position={`0 0 0`} rotation={`${theta5-90} 0 0`} model-opacity={opacity}>
                   {/* J6 */}
-                  <a-entity j_id="6" gltf-model="#j6" position={`0 0 0`} rotation={`0 0 ${theta6}`}>
+                  <a-entity j_id="6" gltf-model="#j6" position={`0 0 0`} rotation={`0 0 ${theta6}`} model-opacity={opacity}>
                     {/* Tool */}
-                    <a-entity gltf-model="#j6_1" position={`${finger_pos} 0 ${L_56+L_ee}`}></a-entity>
-                    <a-entity gltf-model="#j6_2" position={`${-finger_pos} 0 ${L_56+L_ee}`}></a-entity>
+                    <a-entity gltf-model="#j6_1" position={`${finger_pos} 0 ${L_56+L_ee}`} model-opacity={opacity}></a-entity>
+                    <a-entity gltf-model="#j6_2" position={`${-finger_pos} 0 ${L_56+L_ee}`} model-opacity={opacity}></a-entity>
                   </a-entity>
                 </a-entity>
               </a-entity>
@@ -66,6 +67,8 @@ const agilex_piper_Model = (props) => {
 
 // Jaka_ZU_5 Robot Params
 const jaka_zu_5_Model = (props) => {
+  const opacity = 0.8;
+
   function urdf2mrJoints(udJoints) {
     const mr = [
       udJoints[0],
@@ -90,7 +93,7 @@ const jaka_zu_5_Model = (props) => {
   return (
     <React.Fragment>
       {/* Plane */}
-      <a-plane
+      {/*      <a-plane
         position="0 0 0"
         rotation="-90 0 0"
         width="1.2"
@@ -99,33 +102,33 @@ const jaka_zu_5_Model = (props) => {
         opacity="0.0"
         visible="False"
       ></a-plane>
-
+        */}
       {/* Robot Base */}
-      <a-entity robot-click="" gltf-model="#base" position={'0 0 0'} rotation={`0 -180 0`} visible="true">
+      <a-entity robot-click="" gltf-model="#base" position={'0 0 0'} rotation={`0 -180 0`} visible="true" model-opacity={opacity}>
         {/* J1 */}
-        <a-entity j_id="1" gltf-model="#j1" position={'0 0 0'} rotation={`0 ${theta1-180} 0`}>
+        <a-entity j_id="1" gltf-model="#j1" position={'0 0 0'} rotation={`0 ${theta1-180} 0`} model-opacity={opacity}>
           {/* J2 */}
-          <a-entity j_id="2" gltf-model="#j2" position={`0 ${L_01} 0`} rotation={`${-theta2} 0 0`}>
+          <a-entity j_id="2" gltf-model="#j2" position={`0 ${L_01} 0`} rotation={`${-theta2} 0 0`}  model-opacity={opacity}>
             {/* J3 */}
-            <a-entity j_id="3" gltf-model="#j3" position={`0 ${L_23} 0`} rotation={`${-theta3} 0 0`}>
+            <a-entity j_id="3" gltf-model="#j3" position={`0 ${L_23} 0`} rotation={`${-theta3} 0 0`} model-opacity={opacity}>
               {/* J4 */}
-              <a-entity j_id="4" gltf-model="#j4" position={`0 ${L_34} 0`} rotation={`${-theta4} 0 0`}>
+              <a-entity j_id="4" gltf-model="#j4" position={`0 ${L_34} 0`} rotation={`${-theta4} 0 0`} model-opacity={opacity}>
                 {/* J5 */}
-                <a-entity j_id="5" gltf-model="#j5" position={`${W_45} ${L_56} 0.0`} rotation={`0 ${theta5-90} 0 `}>
+                <a-entity j_id="5" gltf-model="#j5" position={`${W_45} ${L_56} 0.0`} rotation={`0 ${theta5-90} 0 `} model-opacity={opacity}>
                   {/* J6 */}
-                  <a-entity j_id="6" gltf-model="#j6" position={`0 0 0`} rotation={`0 0 ${theta6}`}>
+                  <a-entity j_id="6" gltf-model="#j6" position={`0 0 0`} rotation={`0 0 ${theta6}`} model-opacity={opacity}>
                     {/* Tool */}
-                    <a-entity gltf-model="#j6_1" position='0.01 0 0.15' rotation='0 180 0'> 
+                    <a-entity gltf-model="#j6_1" position='0.01 0 0.15' rotation='0 180 0' model-opacity={opacity}> 
                       {/* AG-160-90 hand */}
-                      <a-entity gltf-model='#j6_2a' position='-0.02 0 -0.06' rotation={`0 ${thetaF2a}  0` }>
-                        <a-entity gltf-model='#j6_4a' position='0.0 0 0.055' rotation={`180 ${thetaF3a}  0` }>
-                          <a-entity gltf-model='#j6_3b' position='-0.0 0 -0.02' rotation={`0 180 -90` }>
+                      <a-entity gltf-model='#j6_2a' position='-0.02 0 -0.06' rotation={`0 ${thetaF2a}  0` }  model-opacity={opacity} >
+                        <a-entity gltf-model='#j6_4a' position='0.0 0 0.055' rotation={`180 ${thetaF3a}  0` } model-opacity={opacity}>
+                          <a-entity gltf-model='#j6_3b' position='-0.0 0 -0.02' rotation={`0 180 -90` } model-opacity={opacity}>
                         </a-entity>
                         </a-entity>
                       </a-entity>
-                      <a-entity gltf-model='#j6_2b' position='0.04 0 -0.06' rotation={`0 ${thetaF2b} 0` }>
-                        <a-entity gltf-model='#j6_4b' position='-0.0 0 0.055' rotation={`0 ${thetaF3b} 0` }>
-                          <a-entity gltf-model='#j6_3b' position='-0.0 0 -0.02' rotation={`0 180 -90` }>
+                      <a-entity gltf-model='#j6_2b' position='0.04 0 -0.06' rotation={`0 ${thetaF2b} 0` } model-opacity={opacity}>
+                        <a-entity gltf-model='#j6_4b' position='-0.0 0 0.055' rotation={`0 ${thetaF3b} 0` } model-opacity={opacity}>
+                          <a-entity gltf-model='#j6_3b' position='-0.0 0 -0.02' rotation={`0 180 -90` } model-opacity={opacity}>
                           </a-entity>
                         </a-entity>
                       </a-entity>

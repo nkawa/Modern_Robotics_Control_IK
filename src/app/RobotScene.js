@@ -86,8 +86,9 @@ export default function RobotScene(props) {
       <a-scene scene xr-mode-ui="XRMode: ar">
         {/* VR Controller */}
         <a-entity oculus-touch-controls="hand: right" vr-controller-right visible={true}></a-entity>
+        <a-circle position="0 0 0" rotation="-90 0 0" radius={"0.3"} color={"#7BC8A4"} opacity="0.5"></a-circle>
 
-        <Assets robot_model={robot_model} viewer={props.viewer} monitor={props.monitor} />
+        <Assets robot_model={robot_model} appmode={props.appmode} />
 
         {/* Robot */}
         <Select_Robot {...robotProps} />
