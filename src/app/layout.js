@@ -1,11 +1,12 @@
 import { Inter } from "next/font/google";
 import 'bootstrap/dist/css/bootstrap.min.css'
 import "./globals.css";
+import {  codeType } from '../lib/MetaworkMQTT'
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "AgileX-PiPER-Control-IK",
+  title: "JAKA-control",
 };
 
 export default function RootLayout({ children }) {
