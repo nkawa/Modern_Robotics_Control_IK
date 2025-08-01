@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { connectMQTT, mqttclient, idtopic, subscribeMQTT, publishMQTT, codeType } from '../lib/MetaworkMQTT'
 
+// Try to make independent MQTT functions
 export default function useMqtt({
   props,
   requestRobot,
@@ -17,14 +18,13 @@ export default function useMqtt({
     window.mqttClient = connectMQTT(requestRobot);
     window.mqttClient.on('connect', () => {
       subscribeMQTT(MQTT_DEVICE_TOPIC);
-      subscribeMQTT(MQTT_CTRL_TOPIC + idtopic);
     });
   }
 
   // define the joint handler for incoming messages
   const handler = (topic, message) => {
     let data;
-    // console.log("收到MQTT Message:", topic, message.toString());
+    // console.log("get MQTT Message:", topic, message.toString());
     try {
       data = JSON.parse(message.toString());
     } catch (e) {

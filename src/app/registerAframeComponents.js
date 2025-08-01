@@ -1,4 +1,5 @@
 import { three2worldMatGen, world2threeMatGen } from './constTransformGen';
+import { AppMode } from './appmode.js';
 
 let registered = false;
 let lastUpdate = 0;
@@ -41,19 +42,19 @@ export default function registerAframeComponents(options) {
     toolPointMover,
     controllerUpdater,
   } = options;
-  
+
   AFRAME.registerComponent('robot-click', {
     init: function () {
       if (this.el.object3D?.matrixWorld) {
-	baseLinkPose = this.el.object3D.matrixWorld.clone();
-	baseLinkPoseInv.current = this.el.object3D.matrixWorld.clone().invert();
-	console.log('00 baseLinkPose diagonal: ',
-		    baseLinkPose.elements[0].toFixed(3), ', ',
-		    baseLinkPose.elements[5].toFixed(3), ', ',
-		    baseLinkPose.elements[10].toFixed(3));
-	console.log('00 baseLinkPoseInv: ', baseLinkPoseInv.current.elements[0].toFixed(3), ', ',
-		    baseLinkPoseInv.current.elements[5].toFixed(3), ', ',
-		    baseLinkPoseInv.current.elements[10].toFixed(3));
+        baseLinkPose = this.el.object3D.matrixWorld.clone();
+        baseLinkPoseInv.current = this.el.object3D.matrixWorld.clone().invert();
+        console.log('00 baseLinkPose diagonal: ',
+          baseLinkPose.elements[0].toFixed(3), ', ',
+          baseLinkPose.elements[5].toFixed(3), ', ',
+          baseLinkPose.elements[10].toFixed(3));
+        console.log('00 baseLinkPoseInv: ', baseLinkPoseInv.current.elements[0].toFixed(3), ', ',
+          baseLinkPoseInv.current.elements[5].toFixed(3), ', ',
+          baseLinkPoseInv.current.elements[10].toFixed(3));
       }
       this.el.addEventListener('click', () => {
         robotChange();
@@ -62,12 +63,12 @@ export default function registerAframeComponents(options) {
     },
     tick: function () {
       if (this.el.object3D) {
-	if (this.el.object3D.matrixWorld) {
-	  if (!baseLinkPose.equals(this.el.object3D.matrixWorld)) {
-	    baseLinkPose = this.el.object3D.matrixWorld.clone();
-	    baseLinkPoseInv.current = this.el.object3D.matrixWorld.clone().invert();
-	  }
-	}
+        if (this.el.object3D.matrixWorld) {
+          if (!baseLinkPose.equals(this.el.object3D.matrixWorld)) {
+            baseLinkPose = this.el.object3D.matrixWorld.clone();
+            baseLinkPoseInv.current = this.el.object3D.matrixWorld.clone().invert();
+          }
+        }
       }
     }
   });
@@ -99,43 +100,44 @@ export default function registerAframeComponents(options) {
     },
     logThumbstick: function (evt) {
       if (this.detail_x_prev <= 0.35 && evt.detail.x > 0.35) {
-	controllerModeChange(1);
-	console.log("RIGHT", controllerModeChange(0));
+        controllerModeChange(1);
+        console.log("RIGHT", controllerModeChange(0));
       }
       const controllerMode = controllerModeChange(0);
       switch (controllerMode) {
-      case 'Normal':
-	if (evt.detail.y < 0.5 &&
-	    this.detail_y_prev >= 0.5) {
-	  controllerMagnification.current *= 1.41421356237; // sqrt(2)
-	  if (controllerMagnification.current > 1)
-	    controllerMagnification.current = 1;
-	  console.debug("MAGNIFICATION UP", controllerMagnification.current);
-	}
-	if (evt.detail.y < -0.35 &&
-	    this.detail_y_prev >= -0.35) {
-	  controllerMagnification.current *= 0.70710678118; // 1/sqrt(2)
-	  console.debug("MAGNIFICATION RESET", controllerMagnification.current);
-	}
-	if (evt.detail.x < -0.35) {
-	  console.log("LEFT", evt.detail.x);
-	  setSlowRewindMode(true);
-	} else {
-	  setSlowRewindMode(false);
-	}
-	break;
-      case 'ToolPoint':
-	if (evt.detail.y < -0.35) {
-	  toolPointMover(-0.001);
-	}
-	if (evt.detail.y > 0.35) {
-	  toolPointMover(0.001);
-	}
-	controllerUpdater();
-	break;
+        case 'Normal':
+          if (evt.detail.y < 0.5 &&
+            this.detail_y_prev >= 0.5) {
+            controllerMagnification.current *= 1.41421356237; // sqrt(2)
+            if (controllerMagnification.current > 1)
+              controllerMagnification.current = 1;
+            console.debug("MAGNIFICATION UP", controllerMagnification.current);
+          }
+          if (evt.detail.y < -0.35 &&
+            this.detail_y_prev >= -0.35) {
+            controllerMagnification.current *= 0.70710678118; // 1/sqrt(2)
+            console.debug("MAGNIFICATION RESET", controllerMagnification.current);
+          }
+          if (evt.detail.x < -0.35) {
+            console.log("LEFT", evt.detail.x);
+            setSlowRewindMode(true);
+          } else {
+            setSlowRewindMode(false);
+          }
+          break;
+        case 'ToolPoint':
+          if (evt.detail.y < -0.35) {
+            toolPointMover(-0.001);
+          }
+          if (evt.detail.y > 0.35) {
+            toolPointMover(0.001);
+          }
+          controllerUpdater();
+          break;
       }
       this.detail_x_prev = evt.detail.x;
       this.detail_y_prev = evt.detail.y;
+      
     },
     tick: function () {
       const obj = this.el.object3D;
@@ -144,23 +146,23 @@ export default function registerAframeComponents(options) {
       obj.getWorldPosition(controllerPosition);
       const pose = obj.matrixWorld;
       if (this._my_init_flag) {
-	if (!pose.equals(this.lastPose)) {
-	  const controllerBase = baseLinkPoseInv.current.clone().multiply(pose);
+        if (!pose.equals(this.lastPose)) {
+          const controllerBase = baseLinkPoseInv.current.clone().multiply(pose);
           set_controller_object(controllerBase);
-	  //
-	  // // **** debugging output ****
-	  // const position = new THREE.Vector3();
-	  // position.setFromMatrixPosition(this.el.object3D.matrixWorld);
-	  // position.applyMatrix4(three2worldMat); // convert to world coord.
-	  // console.debug("controller position: " + position.x.toFixed(3)
-	  // 	      + ", " + position.y.toFixed(3)
-	  // 	      + ", " + position.z.toFixed(3));
-	  // controllerUpdater();
-	}
+          //
+          // // **** debugging output ****
+          // const position = new THREE.Vector3();
+          // position.setFromMatrixPosition(this.el.object3D.matrixWorld);
+          // position.applyMatrix4(three2worldMat); // convert to world coord.
+          // console.debug("controller position: " + position.x.toFixed(3)
+          // 	      + ", " + position.y.toFixed(3)
+          // 	      + ", " + position.z.toFixed(3));
+          // controllerUpdater();
+        }
       } else {
-	const controllerBase = baseLinkPoseInv.current.clone().multiply(pose);
-	set_controller_object(controllerBase);
-	this._my_init_flag = true;
+        const controllerBase = baseLinkPoseInv.current.clone().multiply(pose);
+        set_controller_object(controllerBase);
+        this._my_init_flag = true;
       }
       ++this.count;
       this.lastPose.copy(pose);
@@ -216,10 +218,13 @@ export default function registerAframeComponents(options) {
   // Start animation in VR scene
   AFRAME.registerComponent('scene', {
     init: function () {
+      if (props.appmode === AppMode.viewer) {// viewer は VR モードじゃなくても requestする
+        window.requestAnimationFrame(onAnimationMQTT);
+      }
       this.el.addEventListener('enter-vr', () => {
         vrModeRef.current = true;
         console.log('enter-vr');
-        if (!props.viewer) {
+        if (props.appmode !== AppMode.viewer) {
           let xrSession = this.el.renderer.xr.getSession();
           xrSession.requestAnimationFrame(onXRFrameMQTT);
         }
@@ -237,14 +242,16 @@ export default function registerAframeComponents(options) {
     },
     tick: function (time, timeDelta) {
       if (workerLastJoints.current) {
-	if (time - lastUpdate > 16) {
-	  lastUpdate = time;
-	  setThetaBody(workerLastJoints.current);
-	}
-	console.debug('workerLastJoints: '
-		      + workerLastJoints.current[0].toFixed(3) + ', '
-		      + workerLastJoints.current[1].toFixed(3) + ', '
-		      + workerLastJoints.current[2].toFixed(3));
+        if (time - lastUpdate > 16) { //16msec(60fps) 以上で来たら
+          lastUpdate = time;
+          setThetaBody(workerLastJoints.current);
+
+        }
+/*        console.debug('workerLastJoints: '
+          + workerLastJoints.current[0].toFixed(3) + ', '
+          + workerLastJoints.current[1].toFixed(3) + ', '
+          + workerLastJoints.current[2].toFixed(3));
+          */
       }
     }
   });
@@ -274,11 +281,11 @@ export default function registerAframeComponents(options) {
       endLinkPoseUpdater();
       const obj = this.el.object3D;
       if (!obj.matrixWorld ||
-	  !baseLinkPoseInv.current ||
-	  !baseLinkPose
-	 ) return; // not yet initialized
+        !baseLinkPoseInv.current ||
+        !baseLinkPose
+      ) return; // not yet initialized
       const endLinkTHREE = baseLinkPose.clone().
-	    multiply(world2threeMat).multiply(endLinkPose.current);
+        multiply(world2threeMat).multiply(endLinkPose.current);
       endLinkPosition.setFromMatrixPosition(endLinkTHREE);
       endLinkOrientation.setFromRotationMatrix(endLinkTHREE);
       this.el.object3D.position.copy(endLinkPosition);

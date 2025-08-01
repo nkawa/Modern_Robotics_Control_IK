@@ -3,9 +3,9 @@ import 'aframe'
 const THREE = window.AFRAME.THREE;
 import * as React from 'react'
 import RobotScene from './RobotScene';
-import registerAframeComponents from './registerAframeComponents'; 
+import registerAframeComponents from './registerAframeComponents';
 import useMqtt from './useMqtt';
-import { mqttclient,idtopic, publishMQTT, codeType } from '../lib/MetaworkMQTT'
+import { mqttclient, idtopic, publishMQTT, codeType } from '../lib/MetaworkMQTT'
 import { three2worldMatGen, world2threeMatGen } from './constTransformGen';
 
 // const mr = require('../modern_robotics/modern_robotics_core.js');
@@ -17,30 +17,33 @@ import { three2worldMatGen, world2threeMatGen } from './constTransformGen';
 // MQTT Topics
 const MQTT_REQUEST_TOPIC = "mgr/request";
 const MQTT_DEVICE_TOPIC = "dev/" + idtopic;
-const MQTT_CTRL_TOPIC = "control/"; 
+const MQTT_CTRL_TOPIC = "control/" + idtopic;
 const MQTT_ROBOT_STATE_TOPIC = "robot/";
+
+console.log("MQTT_DEVICE_TOPIC", MQTT_DEVICE_TOPIC, MQTT_CTRL_TOPIC);
+
 
 export default function DynamicHome(props) {
   // State variables
   // Generate constant transformation matrices (THREE.Matrix4)
-  const [three2worldMat] = React.useState(()=> three2worldMatGen());
-  const [world2threeMat] = React.useState(()=> world2threeMatGen());
+  const [three2worldMat] = React.useState(() => three2worldMatGen());
+  const [world2threeMat] = React.useState(() => world2threeMatGen());
   console.debug("three2worldMat: ", three2worldMat.elements);
   console.debug("world2threeMat: ", world2threeMat.elements);
 
   const [now, setNow] = React.useState(new Date())
-  const [rendered,set_rendered] = React.useState(false)
+  const [rendered, set_rendered] = React.useState(false)
   const robotNameList = ["jaka_zu_5", "agilex_piper"]
-  const [robotName,set_robotName] = React.useState(robotNameList[0])
+  const [robotName, set_robotName] = React.useState(robotNameList[0])
 
   // initilize Modern Robotics parameters
   // Load Robot Model
-  const [robot_model,set_robot_model] = React.useState(robotName); // Change this to your robot model
+  const [robot_model, set_robot_model] = React.useState(robotName); // Change this to your robot model
   const [toolLimit] = React.useState({ min: -1, max: 89 });
 
 
-  const vrModeRef = React.useRef(false); 
-  const [trigger_on,set_trigger_on] = React.useState(false)
+  const vrModeRef = React.useRef(false);
+  const [trigger_on, set_trigger_on] = React.useState(false)
   const [grip_on, set_grip_on] = React.useState(false)
   const [button_a_on, set_button_a_on] = React.useState(false)
   const [button_b_on, set_button_b_on] = React.useState(false)
@@ -49,19 +52,20 @@ export default function DynamicHome(props) {
     return controller_object;
   });
 
-  const [selectedMode, setSelectedMode] = React.useState('control'); 
-  const robotIDRef = React.useRef(idtopic); 
+  const [selectedMode, setSelectedMode] = React.useState('control');
 
+  const robotIDRef = React.useRef("none"); // 
+//  console.log("robotIDRef:", robotIDRef.current, "id:", idtopic);
   // VR camera pose
-  const [c_pos_x,set_c_pos_x] = React.useState(0.23)
-  const [c_pos_y,set_c_pos_y] = React.useState(0.3)
-  const [c_pos_z,set_c_pos_z] = React.useState(-0.6)
-  const [c_deg_x,set_c_deg_x] = React.useState(0)
-  const [c_deg_y,set_c_deg_y] = React.useState(150)
-  const [c_deg_z,set_c_deg_z] = React.useState(0)
+  const [c_pos_x, set_c_pos_x] = React.useState(0.23)
+  const [c_pos_y, set_c_pos_y] = React.useState(0.3)
+  const [c_pos_z, set_c_pos_z] = React.useState(-0.6)
+  const [c_deg_x, set_c_deg_x] = React.useState(0)
+  const [c_deg_y, set_c_deg_y] = React.useState(150)
+  const [c_deg_z, set_c_deg_z] = React.useState(0)
 
   const [updateRobot, setUpdateRobot] = React.useState(0)
-  const [dsp_message,set_dsp_message] = React.useState("XXX")
+  const [dsp_message, set_dsp_message] = React.useState("XXX")
 
   const green_color = 'lime';
   const red_color = 'red';
@@ -69,7 +73,7 @@ export default function DynamicHome(props) {
 
   // Robot Tool
   const toolNameList = ["No tool"]
-  const [toolName,set_toolName] = React.useState(toolNameList[0])
+  const [toolName, set_toolName] = React.useState(toolNameList[0])
 
   // Frame ID
   const reqIdRef = React.useRef()
@@ -78,7 +82,7 @@ export default function DynamicHome(props) {
   const endLinkPoseStart = React.useRef(null);
   const baseLinkPoseInv = React.useRef(null);
   const controllerStartInv = React.useRef(null);
-  React.useEffect(()=>{
+  React.useEffect(() => {
     // endLinkPose.current =
     endLinkPoseStart.current = null;
     baseLinkPoseInv.current = null;
@@ -86,37 +90,43 @@ export default function DynamicHome(props) {
   }, [robot_model]);
 
   //*** controller mode change functions
+  // 20250801 no mode.
   const [controllerModeChange] = React.useState(() => {
     let modeNumber = 0;
     const controllerMode = ['Normal', 'ToolPoint'];
     return (incr) => {
       modeNumber += incr;
       if (modeNumber < 0) {
-	modeNumber = controllerMode.length - 1;
+  modeNumber = controllerMode.length - 1;
       } else if (modeNumber >= controllerMode.length) {
-	modeNumber = 0;
+  modeNumber = 0;
       }
       console.debug("Controller Mode changed to: ", controllerMode[modeNumber]);
       return controllerMode[modeNumber];
     };
   });
+  
+
   // *** function that sets the end effector point in the worker thread
   const [toolPointMover] = React.useState(() => {
-    let toolPoint = new THREE.Vector3(0, 0, 0);
+    let toolPoint = new THREE.Vector3(0, 0, 0.180);
     return (delta) => {
       if (typeof delta === 'number') {
-	toolPoint.z += delta;
-	workerRef.current
-	  .postMessage({type: 'set_end_effector_point',
-			endEffectorPoint: toolPoint.toArray()});
-	console.debug("Tool Point moved to: ", toolPoint.x.toFixed(3),
-		      toolPoint.y.toFixed(3), toolPoint.z.toFixed(3));
+        toolPoint.z += delta;
+        workerRef.current
+          .postMessage({
+            type: 'set_end_effector_point',
+            endEffectorPoint: toolPoint.toArray()
+          });
+        console.debug("Tool Point moved to: ", toolPoint.x.toFixed(3),
+          toolPoint.y.toFixed(3), toolPoint.z.toFixed(3));
       } else if (delta === null) {
-	// reset
-	toolPoint.x = 0; toolPoint.y = 0; toolPoint.z = 0;
+        // reset
+        toolPoint.x = 0; toolPoint.y = 0; toolPoint.z = 0.180;
       }
       return toolPoint;
-    };});
+    };
+  });
   // *** updater of the start poses of the end link and controller
   const [controllerUpdate, setControllerUpdate] = React.useState(0);
   const [controllerUpdater] = React.useState(() => {
@@ -124,13 +134,13 @@ export default function DynamicHome(props) {
   });
   // ****************
   // Animation loop
-  const loop = (timestamp)=>{
-    reqIdRef.current = window.requestAnimationFrame(loop) 
+  const loop = (timestamp) => {
+    reqIdRef.current = window.requestAnimationFrame(loop)
   }
   React.useEffect(() => {
     loop()
-    return () => window.cancelAnimationFrame(reqIdRef.current) 
-  },[])
+    return () => window.cancelAnimationFrame(reqIdRef.current)
+  }, [])
 
 
   // *** Robot initial joint angles ***
@@ -143,20 +153,23 @@ export default function DynamicHome(props) {
     return mr;
   }
   const theta_body_initial_map = {
-    'jaka_zu_5': [0,110,90,70,-90,90].map(x=>x*Math.PI/180),
-    'agilex_piper': piperMr2urdf([0, -15, 82.6, 0, 70, 0].map(x=>x*Math.PI/180)),
+    'jaka_zu_5': [0, 110, 90, 70, -90, 90].map(x => x * Math.PI / 180),
+    'agilex_piper': piperMr2urdf([0, -15, 82.6, 0, 70, 0].map(x => x * Math.PI / 180)),
   };
-  const [theta_body, setThetaBody] = React.useState(()=>{
+  const [theta_body, setThetaBody] = React.useState(() => {
     return theta_body_initial_map[robot_model] || [0, 0, 0, 0, 0, 0];
   });
-  const [theta_tool, setThetaTool] = React.useState(()=>{
+  const [theta_tool, setThetaTool] = React.useState(() => {
     const theta_tool_inital = 0;
-    return theta_tool_inital});
+    return theta_tool_inital
+  });
   React.useEffect(() => {
     setThetaBody(theta_body_initial_map[robot_model] || [0, 0, 0, 0, 0, 0]);
     setThetaTool(0);
     toolPointMover(null);
-    setUpdateRobot(updateRobot+1);
+    setUpdateRobot(updateRobot + 1);
+
+    
   }, [robot_model]);
 
 
@@ -170,88 +183,97 @@ export default function DynamicHome(props) {
   React.useEffect(() => {
     if (workerRef.current === null) {
       console.log("******** Creating new worker ********");
-      workerRef.current = new Worker('/worker.js', { type: 'module'});
+      workerRef.current = new Worker('/worker.js', { type: 'module' });
       console.log("workerRef.current: ", workerRef.current);
       workerRef.current.onmessage = (event) => {
-	switch (event.data.type) {
-	case 'ready':
-	  workerRef.current
-	    .postMessage({ type: 'init', filename: robot_model
-			   +'/'+'urdf.json' //robot_model,
-			 });
-	  break;
-	case 'generator_ready':
-	  workerRef.current
-	    .postMessage({ type: 'set_exact_solution',
-			   exactSolution: false });
-	  workerRef.current
-	    .postMessage({ type: 'set_initial_joints',
-			   // joints: theta_body});
-			   joints: theta_body_initial_map[robot_model]
-			 });
-	  break;
-	case 'joints':
-	  if (event.data.joints) {
-	    console.debug("Worker joint message:",
-			  event.data.joints.map(x => x.toFixed(3)).join(', '));
-	    // Always skip to the latest data
-	    workerLastJoints.current = event.data.joints;
-	  }
-	  break;
-	case 'status':
-	  workerLastStatus.current = event.data;
-	  break;
-	case 'pose':
-	  workerLastPose.current = event.data;
-	  break;
-	}
+        switch (event.data.type) {
+          case 'ready':
+            workerRef.current
+              .postMessage({
+                type: 'init', filename: robot_model
+                  + '/' + 'urdf.json' //robot_model,
+              });
+            break;
+          case 'generator_ready':
+            workerRef.current
+              .postMessage({
+                type: 'set_exact_solution',
+                exactSolution: false
+              });
+            workerRef.current
+              .postMessage({
+                type: 'set_initial_joints',
+                // joints: theta_body});
+                joints: theta_body_initial_map[robot_model]
+              });
+            break;
+          case 'joints':
+            if (event.data.joints) {
+              console.debug("Worker joint message:",
+                event.data.joints.map(x => x.toFixed(3)).join(', '));
+              // Always skip to the latest data
+              workerLastJoints.current = event.data.joints;
+            }
+            break;
+          case 'status':
+            workerLastStatus.current = event.data;
+            break;
+          case 'pose':
+            workerLastPose.current = event.data;
+            break;
+        }
       };
+
     }
     // **** set status text to "dsp_message" ****
     const intervalId = setInterval(() => {
       const controllerMode = controllerModeChange(0); // Get current controller mode
-      const messageText = ['MODE: ' + controllerMode];
-      switch (controllerMode) {
-      case 'Normal':
-	messageText
-	  .push('status: ' + workerLastStatus.current?.status +
-		'  magnification: ' + controllerMagnificationUsed.current.toFixed(2),
-		'cond:' + workerLastStatus.current?.condition_number.toFixed(2) +
-		'  manip:'  + workerLastStatus.current?.manipulability.toFixed(3) +
-		'  k:'  + workerLastStatus.current?.sensitivity_scale.toFixed(3),
-		'  limit flags: ' +
-		(workerLastStatus.current?.limit_flag || []).join(', '));
-	break;
-      case 'ToolPoint':
-	messageText.push('Tool Point: ' + toolPointMover(0).toArray().
-			 map(x => x.toFixed(3)).join(', '));
-	break;
-      } 
+      const messageText = ['MODE: '+ controllerMode];
+      switch (controllerMode) { // controllerMode) {
+        case 'Normal':
+          messageText
+            .push('status: ' + workerLastStatus.current?.status +
+              '  magnification: ' + controllerMagnificationUsed.current.toFixed(2),
+              'cond:' + workerLastStatus.current?.condition_number.toFixed(2) +
+              '  manip:' + workerLastStatus.current?.manipulability.toFixed(3) +
+              '  k:' + workerLastStatus.current?.sensitivity_scale.toFixed(3),
+              '  limit flags: ' +
+              (workerLastStatus.current?.limit_flag || []).join(', '));
+          toolPointMover(0); // post mesasge to worker!
+          break;
+        case 'ToolPoint':
+          messageText.push('Tool Point: ' + toolPointMover(0).toArray().
+            map(x => x.toFixed(3)).join(', '));
+          break;
+      }
       set_dsp_message(messageText.join('\n'));
       if (workerLastStatus.current?.sensitivity_scale > 0.001) {
-	dsp_color.current = 'orange'; // Orange color for singularity warning
-      } else if (workerLastStatus.current?.limit_flag.map(x=>x*x).reduce((sum,x)=>sum+x,0) > 0) {
-	dsp_color.current = red_color; // Red color for touching the joint limits
+        dsp_color.current = 'orange'; // Orange color for singularity warning
+      } else if (workerLastStatus.current?.limit_flag.map(x => x * x).reduce((sum, x) => sum + x, 0) > 0) {
+        dsp_color.current = red_color; // Red color for touching the joint limits
       } else {
-	dsp_color.current = green_color; // Green color for normal status
+        dsp_color.current = green_color; // Green color for normal status
       }
+
     }, 200); // Update every 200ms
     //
+
     return () => {
       if (workerRef.current) {
-	workerRef.current.terminate();
-	workerRef.current = null;
+        workerRef.current.terminate();
+        workerRef.current = null;
       }
       clearInterval(intervalId);
     };
+
   }, [updateRobot]);
 
   // ****************
   // Change Robot
-  const robotChange = ()=>{
-    const get = (robotName)=>{
-      let changeIdx = robotNameList.findIndex((e)=>e===robotName) + 1
-      if(changeIdx >= robotNameList.length){
+  const robotChange = () => {
+    const get = (robotName) => {
+      let changeIdx = robotNameList.findIndex((e) => e === robotName) + 1
+      if (changeIdx >= robotNameList.length) {
         changeIdx = 0
       }
       return robotNameList[changeIdx]
@@ -261,20 +283,21 @@ export default function DynamicHome(props) {
   }
 
   // *** function that set endLinkPose from worker thread
-  const [endLinkPoseUpdater] = React.useState(()=>{
-    return ()=>{
+  const [endLinkPoseUpdater] = React.useState(() => {
+    return () => {
       if (workerLastPose.current) {
-	const ppw = workerLastPose.current.position;
-	const qqw = workerLastPose.current.quaternion;
-	if (ppw && qqw) {
-	  const ppt = new THREE.Vector3(ppw[0], ppw[1], ppw[2]);
-	  const qqt = new THREE.Quaternion(qqw[1], qqw[2], qqw[3], qqw[0]);
-	  const poseEE = new THREE.Matrix4();
-	  poseEE.compose(ppt, qqt, new THREE.Vector3(1, 1, 1));
-	  endLinkPose.current = poseEE;
-	}
+        const ppw = workerLastPose.current.position;
+        const qqw = workerLastPose.current.quaternion;
+        if (ppw && qqw) {
+          const ppt = new THREE.Vector3(ppw[0], ppw[1], ppw[2]);
+          const qqt = new THREE.Quaternion(qqw[1], qqw[2], qqw[3], qqw[0]);
+          const poseEE = new THREE.Matrix4();
+          poseEE.compose(ppt, qqt, new THREE.Vector3(1, 1, 1));
+          endLinkPose.current = poseEE;
+        }
       }
-    };});
+    };
+  });
 
   //*** Robot Controller ***/
 
@@ -287,8 +310,8 @@ export default function DynamicHome(props) {
   React.useEffect(() => {
     // VR input period
     if (endLinkPoseStart.current !== null &&
-	baseLinkPoseInv.current !== null &&
-	rendered && vrModeRef.current && trigger_on ) {
+      baseLinkPoseInv.current !== null &&
+      rendered && vrModeRef.current && trigger_on) {
       // base_B^{-1}: start^-1: controllerStartInv.current
       // base_E: goal: controllerCurrentWorld
       // base_S: begin: endLinkPoseStart.current
@@ -314,9 +337,9 @@ export default function DynamicHome(props) {
       quaterQuatDiff.x *= magnification;
       quaterQuatDiff.y *= magnification;
       quaterQuatDiff.z *= magnification;
-      const wAbs = Math.sqrt(1.0 - (quaterQuatDiff.x**2
-				    + quaterQuatDiff.y**2
-				    + quaterQuatDiff.z**2));
+      const wAbs = Math.sqrt(1.0 - (quaterQuatDiff.x ** 2
+        + quaterQuatDiff.y ** 2
+        + quaterQuatDiff.z ** 2));
       quaterQuatDiff.w = quaterQuatDiff.w >= 0 ? wAbs : -wAbs;
       const scale1 = new THREE.Vector3(1, 1, 1);
       const matrixDiff = new THREE.Matrix4();
@@ -324,17 +347,19 @@ export default function DynamicHome(props) {
       //
       //
       const newEndLinkPose = endLinkPoseStart.current.clone()
-	    .multiply(endTcontroller).multiply(matrixDiff)
-	    .multiply(controllerTend);
+        .multiply(endTcontroller).multiply(matrixDiff)
+        .multiply(controllerTend);
       console.debug("matrixDiff: ", matrixDiff.elements[12].toFixed(3),
-      		    matrixDiff.elements[13].toFixed(3),
-      		    matrixDiff.elements[14].toFixed(3));
+        matrixDiff.elements[13].toFixed(3),
+        matrixDiff.elements[14].toFixed(3));
       console.debug("newEndLinkPose: ", newEndLinkPose.elements[12].toFixed(3),
-      		    newEndLinkPose.elements[13].toFixed(3),
-      		    newEndLinkPose.elements[14].toFixed(3));
+        newEndLinkPose.elements[13].toFixed(3),
+        newEndLinkPose.elements[14].toFixed(3));
       // **** send to worker thread ****
-      workerRef.current.postMessage({ type: 'destination',
-				      endLinkPose: newEndLinkPose.elements });
+      workerRef.current.postMessage({
+        type: 'destination',
+        endLinkPose: newEndLinkPose.elements
+      });
       // KinematicsControl(newEndLinkPose);
       // if (workerLastJoints.current) {
       // 	setThetaBody(workerLastJoints.current);
@@ -345,69 +370,73 @@ export default function DynamicHome(props) {
     let updateStartPose = false;
     if (baseLinkPoseInv.current !== null) {
       if (!trigger_on) {
-	// When the trigger off, 
-	//  rewind mode is done if slowRewindMode is true. 
-	workerRef.current.postMessage({ type: 'slow_rewind',
-					slowRewind: slowRewindMode });
-	updateStartPose = true;
-	controllerMagnificationUsed.current = controllerMagnification.current;
+        // When the trigger off, 
+        //  rewind mode is done if slowRewindMode is true. 
+        workerRef.current.postMessage({
+          type: 'slow_rewind',
+          slowRewind: slowRewindMode
+        });
+        updateStartPose = true;
+        controllerMagnificationUsed.current = controllerMagnification.current;
       }
-      if (updateStartPose || endLinkPoseStart.current === null){
-	// do update start pose of end link
-	console.log("update start pose of end link");
-	if (workerLastPose.current) {
+      if (updateStartPose || endLinkPoseStart.current === null) {
+        // do update start pose of end link
+        console.log("update start pose of end link");
+        if (workerLastPose.current) {
           endLinkPoseStart.current = endLinkPose.current.clone();
           // endLinkPoseStart.current = three2worldMat.clone()
-	  //   .multiply(endLinkPose.current);
+          //   .multiply(endLinkPose.current);
           console.debug("endLinkPoseStart: ",
-			endLinkPoseStart.current.elements[12].toFixed(3),
-			endLinkPoseStart.current.elements[13].toFixed(3),
-			endLinkPoseStart.current.elements[14].toFixed(3));
-	}
+            endLinkPoseStart.current.elements[12].toFixed(3),
+            endLinkPoseStart.current.elements[13].toFixed(3),
+            endLinkPoseStart.current.elements[14].toFixed(3));
+        }
       }
       if (updateStartPose || controllerStartInv.current === null) {
-	// do update start pose of controller
+        // do update start pose of controller
         controllerStartInv.current = three2worldMat.clone()
-	  .multiply(controller_object).invert();
+          .multiply(controller_object).invert();
         console.debug("controllerStartInv: ",
-		      controllerStartInv.current.elements[12].toFixed(3),
-		      controllerStartInv.current.elements[13].toFixed(3),
-		      controllerStartInv.current.elements[14].toFixed(3));
+          controllerStartInv.current.elements[12].toFixed(3),
+          controllerStartInv.current.elements[13].toFixed(3),
+          controllerStartInv.current.elements[14].toFixed(3));
       }
     }
     controllerMagnificationPrev.current = controllerMagnification.current;
   }, [...controller_object.elements,
-      controllerUpdate, rendered, trigger_on, slowRewindMode  
-     ]);
+    controllerUpdate, rendered, trigger_on, slowRewindMode
+  ]);
 
   // Gripper Control 
   function clampTool(value) {
     return Math.max(toolLimit.min, Math.min(toolLimit.max, value));
   }
+
+  // no grip for A and B
   React.useEffect(() => {
     let intervalId = null;
-    if (grip_on && button_a_on) {
+    if (button_a_on) {
       intervalId = setInterval(() => {
         setThetaTool(prev => clampTool(prev + 0.5));
-      }, 16.5); 
+      }, 16.5);
     }
-    else if (grip_on && button_b_on) {
+    else if (button_b_on) {
       intervalId = setInterval(() => {
         setThetaTool(prev => clampTool(prev - 0.5));
-      }, 16.5); 
+      }, 16.5);
     }
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [ button_a_on, button_b_on, grip_on]);
+  }, [button_a_on, button_b_on]);
 
   // webController Inputs
   const controllerProps = React.useMemo(() => ({
     robotName, robotNameList, set_robotName,
     toolName, toolNameList, set_toolName,
-    c_pos_x,set_c_pos_x,c_pos_y,set_c_pos_y,c_pos_z,set_c_pos_z,
-    c_deg_x,set_c_deg_x,c_deg_y,set_c_deg_y,c_deg_z,set_c_deg_z,
-    vr_mode:vrModeRef.current,
+    c_pos_x, set_c_pos_x, c_pos_y, set_c_pos_y, c_pos_z, set_c_pos_z,
+    c_deg_x, set_c_deg_x, c_deg_y, set_c_deg_y, c_deg_z, set_c_deg_z,
+    vr_mode: vrModeRef.current,
     selectedMode, setSelectedMode,
     theta_body, setThetaBody,
     theta_tool, setThetaTool,
@@ -417,8 +446,8 @@ export default function DynamicHome(props) {
   }), [
     robotName, robotNameList, set_robotName,
     toolName, toolNameList, set_toolName,
-    c_pos_x,set_c_pos_x,c_pos_y,set_c_pos_y,c_pos_z,set_c_pos_z,
-    c_deg_x,set_c_deg_x,c_deg_y,set_c_deg_y,c_deg_z,set_c_deg_z,
+    c_pos_x, set_c_pos_x, c_pos_y, set_c_pos_y, c_pos_z, set_c_pos_z,
+    c_deg_x, set_c_deg_x, c_deg_y, set_c_deg_y, c_deg_z, set_c_deg_z,
     vrModeRef.current,
     selectedMode, setSelectedMode,
     theta_body, setThetaBody,
@@ -474,28 +503,33 @@ export default function DynamicHome(props) {
     thetaToolMQTT.current = theta_tool;
   }, [theta_tool]);
 
+  /*
   React.useEffect(() => {
     window.requestAnimationFrame(onAnimationMQTT);
   }, []);
-  
-  // web MQTT
-  const onAnimationMQTT = (time) =>{
+  */
+
+  // web MQTT for Viewer に見せるためのロボット情報提示
+  const onAnimationMQTT = (time) => {
     const robot_state_json = JSON.stringify({
       time: time,
       joints: thetaBodyMQTT.current,
       // grip: gripRef.current      
     });
-    publishMQTT(MQTT_ROBOT_STATE_TOPIC + robotIDRef.current , robot_state_json); 
+    //    publishMQTT(MQTT_ROBOT_STATE_TOPIC + robotIDRef.current , robot_state_json); 
+    // これは Viewer 用であって、ロボット制御用ではない！
+    publishMQTT(MQTT_ROBOT_STATE_TOPIC + idtopic, robot_state_json);
     // console.log("onAnimationMQTT published:", robot_state_json);
-    window.requestAnimationFrame(onAnimationMQTT); 
+    window.requestAnimationFrame(onAnimationMQTT);
   }
 
   // VR MQTT
+  // 本当は worker からのメッセージのほうが　良いのでは？
   const receiveStateRef = React.useRef(true); // VR MQTT switch
   const onXRFrameMQTT = (time, frame) => {
-    if (vrModeRef.current){
+    if (vrModeRef.current) {
       frame.session.requestAnimationFrame(onXRFrameMQTT);
-      setNow(performance.now()); 
+      setNow(performance.now());
     }
     if ((mqttclient != null) && receiveStateRef.current) {
       const ctl_json = JSON.stringify({
@@ -503,14 +537,16 @@ export default function DynamicHome(props) {
         joints: thetaBodyMQTT.current,
         tool: thetaToolMQTT.current
       });
-      publishMQTT(MQTT_CTRL_TOPIC + robotIDRef.current, ctl_json);
+      publishMQTT(MQTT_CTRL_TOPIC, ctl_json);
     }
   }
+
   const requestRobot = (mqclient) => {
     const requestInfo = {
       devId: idtopic,
       type: codeType,
     }
+    console.log("Publish request", requestInfo)
     publishMQTT(MQTT_REQUEST_TOPIC, JSON.stringify(requestInfo));
   }
 
@@ -520,8 +556,8 @@ export default function DynamicHome(props) {
     thetaBodyMQTT: setThetaBody,
     thetaToolMQTT: setThetaTool,
     robotIDRef,
-    MQTT_DEVICE_TOPIC, 
-    MQTT_CTRL_TOPIC, 
+    MQTT_DEVICE_TOPIC,
+    MQTT_CTRL_TOPIC,
     MQTT_ROBOT_STATE_TOPIC,
   });
 
@@ -529,7 +565,7 @@ export default function DynamicHome(props) {
   const robotProps = React.useMemo(() => ({
     updateRobot, robotNameList, robotName, theta_body, theta_tool
   }), [updateRobot, robotNameList, robotName, theta_body, theta_tool]);
-  
+
   // Robot Secene Render
   return (
     <RobotScene
@@ -545,12 +581,11 @@ export default function DynamicHome(props) {
       c_deg_x={c_deg_x}
       c_deg_y={c_deg_y}
       c_deg_z={c_deg_z}
-      viewer={props.viewer}
-      monitor={props.monitor}
-      // position_ee={pose_ee_Three.position}
-      // euler_ee={pose_ee_Three.euler}
-      // vr_controller_pos={vr_controller_pos}
-      // vr_controller_euler={vr_controller_euler}
+      appmode={props.appmode}
+    // position_ee={pose_ee_Three.position}
+    // euler_ee={pose_ee_Three.euler}
+    // vr_controller_pos={vr_controller_pos}
+    // vr_controller_euler={vr_controller_euler}
     />
   );
 }
