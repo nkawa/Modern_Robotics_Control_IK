@@ -46,7 +46,7 @@ export const connectMQTT = (callback) => {
             client.publish('mgr/register', JSON.stringify(info)) // for other devices.// maybe retransmit each 10seconds
             client.subscribe('dev/'+userUUID, {noLocal: true}, (err, granted) => {
                 if (!err) {
-                    console.log('MQTT Subscribe Granted',  granted);
+                    console.log('MQTT Subscribe Granted',"dev/"+userUUID,  granted);
                 } else {
                     console.error('MQTT Subscription error: ', err);
                 }

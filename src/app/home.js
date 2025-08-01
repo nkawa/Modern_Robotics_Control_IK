@@ -17,10 +17,11 @@ import { three2worldMatGen, world2threeMatGen } from './constTransformGen';
 // MQTT Topics
 const MQTT_REQUEST_TOPIC = "mgr/request";
 const MQTT_DEVICE_TOPIC = "dev/" + idtopic;
-const MQTT_CTRL_TOPIC = "control/" + idtopic;
+const MQTT_CTRL_TOPIC = "control/" ;
+const MQTT_CTRL_TOPIC_ID = "control/"+idtopic ;
 const MQTT_ROBOT_STATE_TOPIC = "robot/";
 
-console.log("MQTT_DEVICE_TOPIC", MQTT_DEVICE_TOPIC, MQTT_CTRL_TOPIC);
+console.log("MQTT_DEVICE_TOPIC", MQTT_DEVICE_TOPIC);
 
 
 export default function DynamicHome(props) {
@@ -374,7 +375,7 @@ export default function DynamicHome(props) {
       // }
     }
     // ** update the controller and end link pose at the trigger_on change
-    console.log("controllerUpdate: ", controllerUpdate);
+//    console.log("controllerUpdate: ", controllerUpdate);
     let updateStartPose = false;
     if (baseLinkPoseInv.current !== null) {
       if (!trigger_on) {
@@ -389,7 +390,7 @@ export default function DynamicHome(props) {
       }
       if (updateStartPose || endLinkPoseStart.current === null) {
         // do update start pose of end link
-        console.log("update start pose of end link");
+//        console.log("update start pose of end link");
         if (workerLastPose.current) {
           endLinkPoseStart.current = endLinkPose.current.clone();
           // endLinkPoseStart.current = three2worldMat.clone()
@@ -546,7 +547,7 @@ export default function DynamicHome(props) {
         joints: thetaBodyMQTT.current,
         tool: thetaToolMQTT.current
       });
-      publishMQTT(MQTT_CTRL_TOPIC, ctl_json);
+      publishMQTT(MQTT_CTRL_TOPIC_ID, ctl_json);
     }
   }
 

@@ -58,7 +58,7 @@ export default function registerAframeComponents(options) {
           baseLinkPoseInv.current.elements[10].toFixed(3));
       }
       this.el.addEventListener('click', () => {
-        robotChange();
+       // robotChange();
         console.log('robot-click');
       });
     },
@@ -100,10 +100,10 @@ export default function registerAframeComponents(options) {
       this.detail_y_prev = 0;
     },
     logThumbstick: function (evt) {
-      if (this.detail_x_prev <= 0.35 && evt.detail.x > 0.35) {
-        controllerModeChange(1);
-        console.log("RIGHT", controllerModeChange(0));
-      }
+//      if (this.detail_x_prev <= 0.35 && evt.detail.x > 0.35) {
+//        controllerModeChange(1);
+//        console.log("RIGHT", controllerModeChange(0));
+//      }
       const controllerMode = controllerModeChange(0);
       switch (controllerMode) {
         case 'Normal':

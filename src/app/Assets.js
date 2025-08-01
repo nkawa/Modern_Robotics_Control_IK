@@ -5,8 +5,7 @@ import { AppMode } from './appmode.js';
 import App from 'next/app';
 
 const Assets = ({robot_model,appmode})=>{
-  const bdir = (appmode == AppMode.normal)?"./":"../" ;
-  console.log("BDIR is "+ bdir+robot_model, appmode);
+  const bdir = (appmode == AppMode.normal)?"./":"../";
 
   if (robot_model === "agilex_piper") {
 
