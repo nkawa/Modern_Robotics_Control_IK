@@ -7,6 +7,8 @@ import registerAframeComponents from './registerAframeComponents';
 import useMqtt from './useMqtt';
 import { mqttclient, idtopic, publishMQTT, codeType } from '../lib/MetaworkMQTT'
 import { three2worldMatGen, world2threeMatGen } from './constTransformGen';
+import { AppMode } from './appmode.js';
+
 
 // const mr = require('../modern_robotics/modern_robotics_core.js');
 // // const RobotKinematics = require('../modern_robotics/modern_robotics_Kinematics.js');
@@ -192,7 +194,7 @@ export default function DynamicHome(props) {
   React.useEffect(() => {
     if (workerRef.current === null) {
       console.log("******** Creating new worker ********");
-      workerRef.current = new Worker('/worker.js', { type: 'module' });
+      workerRef.current = new Worker('/jaka/worker.js', { type: 'module' });
       console.log("workerRef.current: ", workerRef.current);
       workerRef.current.onmessage = (event) => {
         switch (event.data.type) {
@@ -218,17 +220,22 @@ export default function DynamicHome(props) {
             break;
           case 'joints':
             if (event.data.joints) {
-              console.debug("Worker joint message:",
-                event.data.joints.map(x => x.toFixed(3)).join(', '));
+              if (props.appmode !== AppMode.viewer) {
+                console.debug("Worker joint message:",
+                  event.data.joints.map(x => x.toFixed(3)).join(', '));
               // Always skip to the latest data
-              workerLastJoints.current = event.data.joints;
+                workerLastJoints.current = event.data.joints;
+              }
             }
             break;
           case 'status':
             workerLastStatus.current = event.data;
             break;
           case 'pose':
-            workerLastPose.current = event.data;
+            // ignore info from worker for viewer mode
+            if (props.appmode !== AppMode.viewer) {
+              workerLastPose.current = event.data;
+            }
             break;
         }
       };

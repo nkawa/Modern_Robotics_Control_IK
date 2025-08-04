@@ -21,7 +21,7 @@ let workerState = st.initializing; // worker state
 let subState = sst.dormant;  // slrm & jointRewinder state
 console.log('Now intended to import ModuleFactory');
 // import ModuleFactory from '/wasm/slrm_module.js';
-const ModuleFactory = await import('/wasm/slrm_module.js');
+const ModuleFactory = await import('/jaka/wasm/slrm_module.js');
 console.log('ModuleFactory: ', ModuleFactory);
 console.log('ModuleFactory.default type:', typeof ModuleFactory.default);
 if (typeof ModuleFactory.default !== 'function') {
