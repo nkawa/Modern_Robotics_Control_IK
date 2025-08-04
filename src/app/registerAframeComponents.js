@@ -80,7 +80,11 @@ export default function registerAframeComponents(options) {
       // set_controller_object(this.el.object3D.MatrixWorld);
       // this.el.object3D.rotation.order = Euler_order;
       // Trigger 
-      this.el.addEventListener('triggerdown', () => set_trigger_on(true));
+      this.el.addEventListener('triggerdown', () => {
+        console.log("Trigger down");
+        set_trigger_on(true)
+      }
+      );
       this.el.addEventListener('triggerup', () => set_trigger_on(false));
 
       // Gripper

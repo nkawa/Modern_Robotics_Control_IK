@@ -9,8 +9,8 @@ let receive_state = false // ロボットの状態を受信してるかのフラ
 export default function useMqtt({
   props,
   requestRobot,
-  thetaBodyMQTT,
-  thetaToolMQTT,
+  setThetaBody,
+  setThetaTool,
   robotIDRef,
   MQTT_DEVICE_TOPIC,
   MQTT_CTRL_TOPIC,
@@ -52,16 +52,17 @@ export default function useMqtt({
         // subscribe joints and tool angles
         if (robotIDRef.current && topic === MQTT_CTRL_TOPIC + robotIDRef.current) {
           if (data.joints != undefined) {
-            thetaBodyMQTT(prev => {
-              if (JSON.stringify(prev) !== JSON.stringify(data.joints)) {
-                return data.joints;
+            setThetaBody(prev => {
+              const thetaJoints = data.joints.map(angle => angle * Math.PI / 180); // Convert to radians
+              if (JSON.stringify(prev) !== JSON.stringify(thetaJoints)) {
+                return thetaJoints;
               }
               //              console.log("Time:", data.time, "From:", topic, "Send Joint Body:", data.joints);
               return prev;
             });
           }
           if (data.tool != undefined) {
-            thetaToolMQTT(prev => {
+            setThetaTool(prev => {
               if (JSON.stringify(prev) !== JSON.stringify(data.tool)) {
                 return data.tool;
               }
@@ -93,13 +94,13 @@ export default function useMqtt({
             robotIDRef.current = data.devId
             if (receive_state === false) { // ロボットの姿勢を受け取るまで、スタートしない。
               subscribeMQTT([
-                MQTT_ROBOT_STATE_TOPIC + robotIDRef.current // ロボットの姿勢を待つ
+                MQTT_ROBOT_STATE_TOPIC + robotIDRef.current // 接続した実ロボットの姿勢を待つ
               ])
             }
           }
           return;
         }
-        if (topic === MQTT_ROBOT_STATE_TOPIC + robotIDRef.current) { // ロボットの姿勢を受け取ったら
+        if (topic === MQTT_ROBOT_STATE_TOPIC + robotIDRef.current) { // 実ロボットの姿勢を受け取ったら
           let data = JSON.parse(message.toString()) ///
           const joints = data.joints
           // ここで、joints の安全チェックをすべき
@@ -107,21 +108,23 @@ export default function useMqtt({
           if (firstReceiveJoint ) {
             console.log("Receive Robot Joints:", joints);
 
-//              if (input_rotateRef.current.some((e, i) => e !== joints[i])) {
-//                console.log("receive joints", joints)
-//                set_input_rotate([...joints])
-//                inputRotateFlg.current = true
-//              }
+          // 受け取った位置をセットする
+            setThetaBody(prev => {
+              const thetaJoints = data.joints.map(angle => angle * Math.PI / 180); // Convert to radians
+              if (JSON.stringify(prev) !== JSON.stringify(thetaJoints)) {
+                return thetaJoints;
+              }
+              return prev;
+            })
           }
-          
 
-          if (firstReceiveJoint) { // 本当はダメ！
+          if (firstReceiveJoint) { // 本当はダメ！ // TCP を設定したい。
             firstReceiveJoint = false
             window.setTimeout(() => {
               console.log("Start to send movement!", robotIDRef.current);
               receive_state = true; //
               publishMQTT("dev/" + robotIDRef.current, JSON.stringify({ controller: "browser", devId: idtopic })) // 自分の topic を教える
-            }, 1000);
+            },500);
           }
         }
 

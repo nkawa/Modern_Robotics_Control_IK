@@ -29,8 +29,8 @@ export default function DynamicHome(props) {
   // Generate constant transformation matrices (THREE.Matrix4)
   const [three2worldMat] = React.useState(() => three2worldMatGen());
   const [world2threeMat] = React.useState(() => world2threeMatGen());
-  console.debug("three2worldMat: ", three2worldMat.elements);
-  console.debug("world2threeMat: ", world2threeMat.elements);
+//  console.debug("three2worldMat: ", three2worldMat.elements);
+//  console.debug("world2threeMat: ", world2threeMat.elements);
 
   const [now, setNow] = React.useState(new Date())
   const [rendered, set_rendered] = React.useState(false)
@@ -110,7 +110,7 @@ export default function DynamicHome(props) {
       } else if (modeNumber >= controllerMode.length) {
   modeNumber = 0;
       }
-      console.debug("Controller Mode changed to: ", controllerMode[modeNumber]);
+//      console.debug("Controller Mode changed to: ", controllerMode[modeNumber]);
       return controllerMode[modeNumber];
     };
   });
@@ -127,8 +127,8 @@ export default function DynamicHome(props) {
             type: 'set_end_effector_point',
             endEffectorPoint: toolPoint.toArray()
           });
-        console.debug("Tool Point moved to: ", toolPoint.x.toFixed(3),
-          toolPoint.y.toFixed(3), toolPoint.z.toFixed(3));
+//        console.debug("Tool Point moved to: ", toolPoint.x.toFixed(3),
+//          toolPoint.y.toFixed(3), toolPoint.z.toFixed(3));
       } else if (delta === null) {
         // reset
         toolPoint.x = 0; toolPoint.y = 0; toolPoint.z = 0.180;
@@ -317,10 +317,13 @@ export default function DynamicHome(props) {
   const controllerMagnificationUsed = React.useRef(controllerMagnification.current);
   // *** a function that runs when the controller pose changes
   React.useEffect(() => {
+    console.log("Controller pose changed:", trigger_on,rendered, vrModeRef.current, endLinkPoseStart.current, baseLinkPoseInv.current);
     // VR input period
     if (endLinkPoseStart.current !== null &&
       baseLinkPoseInv.current !== null &&
       rendered && vrModeRef.current && trigger_on) {
+
+      console.log("Controll started with trigger_on:", trigger_on);  
       // base_B^{-1}: start^-1: controllerStartInv.current
       // base_E: goal: controllerCurrentWorld
       // base_S: begin: endLinkPoseStart.current
@@ -390,7 +393,7 @@ export default function DynamicHome(props) {
       }
       if (updateStartPose || endLinkPoseStart.current === null) {
         // do update start pose of end link
-//        console.log("update start pose of end link");
+        console.log("update start pose of end link",workerLastPose.current);
         if (workerLastPose.current) {
           endLinkPoseStart.current = endLinkPose.current.clone();
           // endLinkPoseStart.current = three2worldMat.clone()
@@ -500,12 +503,22 @@ export default function DynamicHome(props) {
     set_rendered(true);
   }, []);
 
+
+  /* Radian to Angles*/
+  const rad2deg = (rad) => {
+    return rad * 180 / Math.PI;
+  }
+
   /* 
   * MQTT 
   */
-  const thetaBodyMQTT = React.useRef(theta_body);
+  //const thetaBodyMQTT = React.useRef(theta_body.map(rad2deg));
+  const degreeBodyMQTT = React.useRef(theta_body.map(rad2deg));
+
   React.useEffect(() => {
-    thetaBodyMQTT.current = theta_body;
+    // we need to check the correntness/ safety of the angles
+
+    degreeBodyMQTT.current = theta_body.map(rad2deg);
   }, [theta_body]);
 
   const thetaToolMQTT = React.useRef(theta_tool);
@@ -523,7 +536,8 @@ export default function DynamicHome(props) {
   const onAnimationMQTT = (time) => {
     const robot_state_json = JSON.stringify({
       time: time,
-      joints: thetaBodyMQTT.current,
+      joints: degreeBodyMQTT.current,
+      tool: thetaToolMQTT.current
       // grip: gripRef.current      
     });
     //    publishMQTT(MQTT_ROBOT_STATE_TOPIC + robotIDRef.current , robot_state_json); 
@@ -544,7 +558,7 @@ export default function DynamicHome(props) {
     if ((mqttclient != null) && receiveStateRef.current) {
       const ctl_json = JSON.stringify({
         time: time,
-        joints: thetaBodyMQTT.current,
+        joints: degreeBodyMQTT.current,
         tool: thetaToolMQTT.current
       });
       publishMQTT(MQTT_CTRL_TOPIC_ID, ctl_json);
@@ -563,8 +577,8 @@ export default function DynamicHome(props) {
   useMqtt({
     props,
     requestRobot,
-    thetaBodyMQTT: setThetaBody,
-    thetaToolMQTT: setThetaTool,
+    setThetaBody: setThetaBody,
+    setThetaTool: setThetaTool,
     robotIDRef,
     MQTT_DEVICE_TOPIC,
     MQTT_CTRL_TOPIC,
