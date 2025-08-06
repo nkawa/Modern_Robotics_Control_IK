@@ -76,7 +76,7 @@ const jaka_zu_5_Model = (props) => {
       udJoints[2],
       udJoints[3] - deg90,
       udJoints[4],
-      udJoints[5] - deg90
+      udJoints[5] +deg90
     ];
     return mr;
   }
@@ -104,7 +104,7 @@ const jaka_zu_5_Model = (props) => {
       ></a-plane>
         */}
       {/* Robot Base */}
-      <a-entity robot-click="" gltf-model="#base" position={'0 0 0'} rotation={`0 -180 0`} visible="true" model-opacity={opacity}>
+      <a-entity robot-click="" gltf-model="#base" position={'0 0 0'} rotation={`0 40 0`} visible="true" model-opacity={opacity}>
         {/* J1 */}
         <a-entity j_id="1" gltf-model="#j1" position={'0 0 0'} rotation={`0 ${theta1-180} 0`} model-opacity={opacity}>
           {/* J2 */}
@@ -116,9 +116,9 @@ const jaka_zu_5_Model = (props) => {
                 {/* J5 */}
                 <a-entity j_id="5" gltf-model="#j5" position={`${W_45} ${L_56} 0.0`} rotation={`0 ${theta5-90} 0 `} model-opacity={opacity}>
                   {/* J6 */}
-                  <a-entity j_id="6" gltf-model="#j6" position={`0 0 0`} rotation={`0 0 ${theta6}`} model-opacity={opacity}>
+                  <a-entity j_id="6" gltf-model="#j6" position={`0 0 0`} rotation={`0 0 ${theta6}+100`} model-opacity={opacity}>
                     {/* Tool */}
-                    <a-entity gltf-model="#j6_1" position='0.01 0 0.15' rotation='0 180 0' model-opacity={opacity}> 
+                    <a-entity gltf-model="#j6_1" position='0.01 0 0.15' rotation='0 180 -45' model-opacity={opacity}> 
                       {/* AG-160-90 hand */}
                       <a-entity gltf-model='#j6_2a' position='-0.02 0 -0.06' rotation={`0 ${thetaF2a}  0` }  model-opacity={opacity} >
                         <a-entity gltf-model='#j6_4a' position='0.0 0 0.055' rotation={`180 ${thetaF3a}  0` } model-opacity={opacity}>

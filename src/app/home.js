@@ -164,7 +164,8 @@ export default function DynamicHome(props) {
     return mr;
   }
   const theta_body_initial_map = {
-    'jaka_zu_5': [0, 110, 90, 70, -90, 90].map(x => x * Math.PI / 180),
+//    'jaka_zu_5': [0, 110, 90, 70, -90, 90].map(x => x * Math.PI / 180),
+    'jaka_zu_5': [-270, 110, 90, 70, -90, 90].map(x => x * Math.PI / 180),
     'agilex_piper': piperMr2urdf([0, -15, 82.6, 0, 70, 0].map(x => x * Math.PI / 180)),
   };
   const [theta_body, setThetaBody] = React.useState(() => {
