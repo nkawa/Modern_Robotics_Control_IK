@@ -104,7 +104,7 @@ const jaka_zu_5_Model = (props) => {
       ></a-plane>
         */}
       {/* Robot Base */}
-      <a-entity robot-click="" gltf-model="#base" position={'0 0 0'} rotation={`0 40 0`} visible="true" model-opacity={opacity}>
+      <a-entity robot-click="" gltf-model="#base" position={props.base_position} rotation={props.base_rotation} visible="true" model-opacity={opacity}>
         {/* J1 */}
         <a-entity j_id="1" gltf-model="#j1" position={'0 0 0'} rotation={`0 ${theta1-180} 0`} model-opacity={opacity}>
           {/* J2 */}

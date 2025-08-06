@@ -2,6 +2,9 @@ import React from 'react';
 import Assets from './Assets';
 import { Select_Robot } from './Model';
 import Controller from './webcontroller.js';
+import StereoVideo from '../lib/stereoWebRTC.js';
+import { AppMode } from './appmode.js';
+
 
 const Line = (props) => {
   const { pos1 = { x: 0, y: 0, z: 0 }, pos2 = { x: 0, y: 0, z: 0 }, color = "magenta", opa = 1, visible = false, ...otherprops } = props;
@@ -22,6 +25,7 @@ export default function RobotScene(props) {
     theta_tool,
     dsp_message, dsp_color,
     c_pos_x, c_pos_y, c_pos_z, c_deg_x, c_deg_y, c_deg_z,
+    set_rtcStats, rtcStats_ref
     // position_ee, euler_ee, 
     // vr_controller_pos, vr_controller_euler,
   } = props;
@@ -80,13 +84,34 @@ export default function RobotScene(props) {
         height={con_hight} radius={con_radius} color="blue" />
     </a-entity>
   );
+
+  let rtc_message = "";
+  if (props.appmode===AppMode.withCam || props.appmode === AppMode.withDualCam){
+      if (rtcStats_ref.current.length > 0) {
+        rtc_message = ["WebRTC Stats:"];
+        rtcStats_ref.current.forEach((stat, idx) => {
+          rtc_message.push(`${stat}`);
+        })
+        rtc_message = rtc_message.join('\n')
+      }
+  }
+  const base_position = '0.6 0.8 0.3'
+
   // console.log("dsp_message: ", dsp_message);
   return (
     <>
-      <a-scene scene xr-mode-ui="XRMode: ar">
+      <a-scene scene xr-mode-ui={`enabled: ${!(props.appmode===AppMode.viewer)?'true':'false'}; XRMode: xr`}>
+      {  // ステレオカメラ使うか
+      (props.appmode===AppMode.withCam || props.appmode === AppMode.withDualCam)?
+        <StereoVideo rendered={rendered} set_rtcStats={set_rtcStats} stereo_visible='true'
+          appmode={props.appmode}
+       />: <></>       
+      }
+
+
         {/* VR Controller */}
         <a-entity oculus-touch-controls="hand: right" vr-controller-right visible={true}></a-entity>
-        <a-circle position="0 0 0" rotation="-90 0 0" radius={"0.3"} color={"#7BC8A4"} opacity="0.5"></a-circle>
+        <a-circle position={base_position} rotation="-90 0 0" radius={"0.3"} color={"#7BC8A4"} opacity="0.5"></a-circle>
 
         <Assets robot_model={robot_model} appmode={props.appmode} />
 
@@ -102,10 +127,16 @@ export default function RobotScene(props) {
 
           {/* Camera */}
           <a-camera id="camera" cursor="rayOrigin: mouse;" position="0 0 0">
+            {/*
             <a-entity
               text={`value: ${dsp_message}; color: ${dsp_color}; backgroundColor: rgb(31, 219, 131); border: #000000; whiteSpace: pre`}
               position="0 0.35 -1.4"
-            />
+            />*/}
+            <a-entity
+                text={`value: ${rtc_message}; color: gray; backgroundColor: rgb(31, 219, 131); border: #000000; whiteSpace: pre`}
+                position="0 0.35 -1.4" 
+             />
+
           </a-camera>
         </a-entity>
         {/* VR Controller Pose */}

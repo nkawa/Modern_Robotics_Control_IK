@@ -7,7 +7,9 @@ import registerAframeComponents from './registerAframeComponents';
 import useMqtt from './useMqtt';
 import { mqttclient, idtopic, publishMQTT, codeType } from '../lib/MetaworkMQTT'
 import { three2worldMatGen, world2threeMatGen } from './constTransformGen';
+
 import { AppMode } from './appmode.js';
+import StereoVideo from '../lib/stereoWebRTC.js';
 
 
 // const mr = require('../modern_robotics/modern_robotics_core.js');
@@ -25,6 +27,21 @@ const MQTT_ROBOT_STATE_TOPIC = "robot/";
 
 console.log("MQTT_DEVICE_TOPIC", MQTT_DEVICE_TOPIC);
 
+// 再レンダリングしなくて値を更新する（かつ set_update で再レンダリングさせられる）
+function useRefState(updateFunc=undefined,initialValue=undefined) {
+  const ref = React.useRef(initialValue);
+  function setValue(arg){
+    if (typeof arg === 'function') {
+      ref.current = arg(ref.current)
+    }else{
+      ref.current = arg
+    }
+    if(updateFunc){
+      updateFunc((v)=>v=v+1)
+    }
+  }
+  return [ref.current, setValue, ref];
+}
 
 export default function DynamicHome(props) {
   // State variables
@@ -77,6 +94,12 @@ export default function DynamicHome(props) {
 
   const [updateRobot, setUpdateRobot] = React.useState(0)
   const [dsp_message, set_dsp_message] = React.useState("XXX")
+
+// for useRefState
+  const [update , set_update] = React.useState(0);
+// WebRTCの統計情報を記録
+  const [rtcStats, set_rtcStats, rtcStats_ref ] = useRefState(set_update,[])
+
 
   const green_color = 'lime';
   const red_color = 'red';
@@ -593,9 +616,12 @@ export default function DynamicHome(props) {
     MQTT_ROBOT_STATE_TOPIC,
   });
 
+  const base_position = '0.65 0.75 0.4'
+  const base_rotation = '0 -180 0'
+
   // Robot State Update Props
   const robotProps = React.useMemo(() => ({
-    updateRobot, robotNameList, robotName, theta_body, theta_tool
+    updateRobot, robotNameList, robotName, theta_body, theta_tool , base_position,base_rotation,
   }), [updateRobot, robotNameList, robotName, theta_body, theta_tool]);
 
   // Robot Secene Render
@@ -614,6 +640,8 @@ export default function DynamicHome(props) {
       c_deg_y={c_deg_y}
       c_deg_z={c_deg_z}
       appmode={props.appmode}
+      set_rtcStats={set_rtcStats}
+      rtcStats_ref={rtcStats_ref}
     // position_ee={pose_ee_Three.position}
     // euler_ee={pose_ee_Three.euler}
     // vr_controller_pos={vr_controller_pos}

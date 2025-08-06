@@ -1,6 +1,6 @@
 {
   "name": "JAKA-control",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -17,6 +17,7 @@
     "numeric": "^1.2.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "sora-js-sdk": "^2025.1.0",
     "ts-morph": "^26.0.0"
   },
   "devDependencies": {
