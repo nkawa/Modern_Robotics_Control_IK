@@ -95,7 +95,7 @@ export default function RobotScene(props) {
         rtc_message = rtc_message.join('\n')
       }
   }
-  const base_position = '0.6 0.8 0.3'
+//  const base_position = '0.6 0.8 0.3'
 
   // console.log("dsp_message: ", dsp_message);
   return (
@@ -111,7 +111,7 @@ export default function RobotScene(props) {
 
         {/* VR Controller */}
         <a-entity oculus-touch-controls="hand: right" vr-controller-right visible={true}></a-entity>
-        <a-circle position={base_position} rotation="-90 0 0" radius={"0.3"} color={"#7BC8A4"} opacity="0.5"></a-circle>
+        <a-circle position={robotProps.base_position} rotation="-90 0 0" radius={"0.3"} color={"#7BC8A4"} opacity="0.5"></a-circle>
 
         <Assets robot_model={robot_model} appmode={props.appmode} />
 
@@ -126,7 +126,7 @@ export default function RobotScene(props) {
         <a-entity id="rig" position={`${c_pos_x} ${c_pos_y} ${c_pos_z}`} rotation={`${c_deg_x} ${c_deg_y} ${c_deg_z}`}>
 
           {/* Camera */}
-          <a-camera id="camera" cursor="rayOrigin: mouse;" position="0 0 0">
+          <a-camera id="camera" cursor="rayOrigin: mouse;" position="0 0 0" stereocam>
             {/*
             <a-entity
               text={`value: ${dsp_message}; color: ${dsp_color}; backgroundColor: rgb(31, 219, 131); border: #000000; whiteSpace: pre`}
