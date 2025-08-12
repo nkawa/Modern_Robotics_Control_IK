@@ -218,7 +218,11 @@ export default function DynamicHome(props) {
   React.useEffect(() => {
     if (workerRef.current === null) {
       console.log("******** Creating new worker ********");
-      workerRef.current = new Worker('/jaka/worker.js', { type: 'module' });
+      // need to check current working directory
+      // console.log("Check Worker path dir: ", window.location.pathname);
+      const workerPath = window.location.pathname + 'worker.js';
+      console.log("Check Worker path dir: ", workerPath);
+      workerRef.current = new Worker(workerPath, { type: 'module' });
       console.log("workerRef.current: ", workerRef.current);
       workerRef.current.onmessage = (event) => {
         switch (event.data.type) {
