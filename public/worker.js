@@ -428,6 +428,15 @@ function mainFunc(timeStep) {
 	for (let i=0; i<joints.length; i++) {
 	  joints[i] = joints[i] + velocities[i]* timeStep;
 	}
+	if (gjkCd) {
+	  const jointPositions = makeCdDoubleVectorG(joints);
+	  gjkCd.calcFk(jointPositions);
+	  jointPositions.delete();
+	  const resultPairs = gjkCd.testCollisionPairs();
+	  if (resultPairs.size() !== 0) {
+	    joints.set(prevJoints);
+	  }
+	}
 	break;
       case SlrmModule.CmdVelGeneratorStatus.END.value:
 	// 目標位置に到達した場合の処理
