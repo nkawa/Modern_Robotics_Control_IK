@@ -73,6 +73,7 @@ export default function DynamicHome(props) {
   });
 
   const [selectedMode, setSelectedMode] = React.useState('control');
+  const [toolCaught, setToolCaught] = React.useState(true); // アームの把持状態
 
   const robotIDRef = React.useRef("none"); // 
 //  console.log("robotIDRef:", robotIDRef.current, "id:", idtopic);
@@ -220,7 +221,13 @@ export default function DynamicHome(props) {
       console.log("******** Creating new worker ********");
       // need to check current working directory
       // console.log("Check Worker path dir: ", window.location.pathname);
-      const workerPath = window.location.pathname + 'worker.js';
+      const simplePath = window.location.pathname.replace(/\/+$/, "")
+      // パスを分割（空文字除去）
+      const parts = simplePath.split("/").filter(Boolean);
+      // 最初の階層だけ返す（なければルート）
+      const rewriteDir = parts.length > 1 ? `/${parts[0]}/` : "/";
+
+      const workerPath = rewriteDir + 'worker.js';
       console.log("Check Worker path dir: ", workerPath);
       workerRef.current = new Worker(workerPath, { type: 'module' });
       console.log("workerRef.current: ", workerRef.current);
@@ -615,6 +622,7 @@ export default function DynamicHome(props) {
     setThetaBody: setThetaBody,
     setThetaTool: setThetaTool,
     robotIDRef,
+    toolCaught, setToolCaught,
     MQTT_DEVICE_TOPIC,
     MQTT_CTRL_TOPIC,
     MQTT_ROBOT_STATE_TOPIC,
@@ -626,6 +634,7 @@ export default function DynamicHome(props) {
   // Robot State Update Props
   const robotProps = React.useMemo(() => ({
     updateRobot, robotNameList, robotName, theta_body, theta_tool , base_position,base_rotation,
+    toolCaught
   }), [updateRobot, robotNameList, robotName, theta_body, theta_tool]);
 
   // Robot Secene Render

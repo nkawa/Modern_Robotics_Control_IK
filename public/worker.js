@@ -21,7 +21,17 @@ let workerState = st.initializing; // worker state
 let subState = sst.dormant;  // slrm & jointRewinder state
 console.log('Now intended to import ModuleFactory');
 // import ModuleFactory from '/wasm/slrm_module.js';
-const ModuleFactory = await import('/jaka/wasm/slrm_module.js');
+//const selfURL = import.meta.url;
+//console.log('Worker self URL:', selfURL, self.location) ;
+const simplePath = self.location.pathname.replace(/\/+$/, "")
+      // パスを分割（空文字除去）
+const parts = simplePath.split("/").filter(Boolean);
+      // 最初の階層だけ返す（なければルート）
+const rewriteDir = parts.length > 1 ? `/${parts[0]}/` : "/";
+
+const modulePath = rewriteDir + 'wasm/slrm_module.js';
+
+const ModuleFactory = await import(modulePath);
 console.log('ModuleFactory: ', ModuleFactory);
 console.log('ModuleFactory.default type:', typeof ModuleFactory.default);
 if (typeof ModuleFactory.default !== 'function') {

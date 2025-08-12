@@ -24,7 +24,7 @@ const agilex_piper_Model = (props) => {
 
   const finger_pos = (((theta_tool)*0.4) / 1000)+0.0004;
 
-  const opacity = 0.8;
+  const opacity = "opacity: 0.5;"; //uumm not working.
   return (
     <>
       {/* Plane */}
@@ -67,7 +67,8 @@ const agilex_piper_Model = (props) => {
 
 // Jaka_ZU_5 Robot Params
 const jaka_zu_5_Model = (props) => {
-  const opacity = 0.8;
+//  const opacity = 0.8;
+  const opacity = "opacity: 0.2";
 
   function urdf2mrJoints(udJoints) {
     const mr = [
@@ -119,6 +120,12 @@ const jaka_zu_5_Model = (props) => {
                  <a-entity j_id="6" gltf-model="#j6" position={`0 0 0`} rotation={`0 0 ${(theta6)+90}`} model-opacity={opacity}>
                     {/* Tool */}
                     <a-entity gltf-model="#j6_1" position='0.01 0 0.15' rotation='0 180 -45' model-opacity={opacity}> 
+                      {/* 把持状態の表示 */}
+                      {props.toolCaught ?
+                        <a-sphere color="red" radius="0.01" position='0 0 -0.085' opacity="0.5"></a-sphere>
+                        : <></>
+                        }
+
                       {/* AG-160-90 hand */}
                       <a-entity gltf-model='#j6_2a' position='-0.02 0 -0.06' rotation={`0 ${thetaF2a}  0` }  model-opacity={opacity} >
                         <a-entity gltf-model='#j6_4a' position='0.0 0 0.055' rotation={`180 ${thetaF3a}  0` } model-opacity={opacity}>

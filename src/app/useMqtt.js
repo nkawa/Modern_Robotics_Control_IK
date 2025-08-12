@@ -27,9 +27,10 @@ export default function useMqtt({
     }
 
     // Viewerと normal では、 handler を分ける(シンプルに）
+    let handler = undefined;
     if (props.appmode == AppMode.viewer) {
       console.log("Initialize MQTT for Viewer Mode", MQTT_DEVICE_TOPIC);
-      const handler = (topic, message) => {
+      handler = (topic, message) => {
         let data;
 //        console.log("get MQTT Message:", topic, message.toString());
         try {
@@ -76,7 +77,7 @@ export default function useMqtt({
  
     } else { // normal mode
 
-      const handler = (topic, message) => {
+      handler = (topic, message) => {
         let data;
         // console.log("get MQTT Message:", topic, message.toString());
         try {
@@ -125,6 +126,26 @@ export default function useMqtt({
               receive_state = true; //
               publishMQTT("dev/" + robotIDRef.current, JSON.stringify({ controller: "browser", devId: idtopic })) // 自分の topic を教える
             },500);
+          }
+
+          // すでに位置が動いていたら
+          if (!firstReceiveJoint){ // 把持状態などのモニタリング
+            const forces = data.forces;
+            if (forces != undefined) {
+              console.log("Receive Robot Forces:", forces);
+            }
+            const tools = data.tools;
+            if (tools != undefined) {
+              console.log("Receive Robot Tools:", tools);
+              if (tools.caught !== undefined) { //  把持状態を更新
+                if (tools.caught === 1) {
+                  // 表示させたい
+                  props.setToolCaught(true);
+                }else{
+                  props.setToolCaught(false);
+                }
+              }
+            }
           }
         }
 

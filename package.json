@@ -1,6 +1,6 @@
 {
   "name": "JAKA-control",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,7 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "aframe": "1.6",
+    "aframe": "1.6.0",
     "bootstrap": "^5.3.3",
     "mqtt": "^5.10.4",
     "next": "15.4.5",
