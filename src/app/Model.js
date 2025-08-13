@@ -24,7 +24,7 @@ const agilex_piper_Model = (props) => {
 
   const finger_pos = (((theta_tool)*0.4) / 1000)+0.0004;
 
-  const opacity = "opacity: 0.5;"; //uumm not working.
+  const opacity = "opacity: 0.5;"; 
   return (
     <>
       {/* Plane */}
@@ -69,6 +69,7 @@ const agilex_piper_Model = (props) => {
 const jaka_zu_5_Model = (props) => {
 //  const opacity = 0.8;
   const opacity = "opacity: 0.2";
+//  const opacity = "opacity: 0.8"; // for check
 
   function urdf2mrJoints(udJoints) {
     const mr = [
@@ -85,7 +86,8 @@ const jaka_zu_5_Model = (props) => {
   const [theta1, theta2, theta3, theta4, theta5, theta6] =
         urdf2mrJoints(theta_body).map(rad2deg);
   const L_01 = 0.12015, L_23 = 0.43, L_34 = 0.3685, W_45 = 0.114, L_56 = 0.1135, L_ee = -0.0065;
-  const thetaF=-20 + theta_tool;
+
+  const thetaF=-23.55 + (theta_tool*0.54); // Adjust for fingar angle
   const thetaF2a=thetaF+180;
   const thetaF2b=-thetaF-180;
   const thetaF3a=-thetaF-0;
@@ -122,7 +124,7 @@ const jaka_zu_5_Model = (props) => {
                     <a-entity gltf-model="#j6_1" position='0.01 0 0.15' rotation='0 180 -45' model-opacity={opacity}> 
                       {/* 把持状態の表示 */}
                       {props.toolCaught ?
-                        <a-sphere color="red" radius="0.01" position='0 0 -0.085' opacity="0.5"></a-sphere>
+                        <a-sphere color="red" radius="0.01" position='0.01 0 -0.085' opacity="0.5"></a-sphere>
                         : <></>
                         }
 
