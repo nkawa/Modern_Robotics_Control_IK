@@ -1,4 +1,5 @@
 import React from 'react';
+import { AppMode } from './appmode';
 
 const deg90 = Math.PI / 2.0;
 const deg180 = Math.PI;
@@ -68,7 +69,7 @@ const agilex_piper_Model = (props) => {
 // Jaka_ZU_5 Robot Params
 const jaka_zu_5_Model = (props) => {
 //  const opacity = 0.8;
-  const opacity = "opacity: 0.2";
+  const opacity = (props.appmode==AppMode.practice)? "opacity:0.8" : "opacity: 0.2";
 //  const opacity = "opacity: 0.8"; // for check
 
   function urdf2mrJoints(udJoints) {
@@ -158,7 +159,7 @@ const robotModelMap = {'jaka_zu_5': jaka_zu_5_Model,
                        'agilex_piper': agilex_piper_Model};
 
 const Select_Robot = (props)=>{
-  const {updateRobot, robotNameList, robotName, ...rotateProps} = props;
+  const {updateRobot, robotNameList, robotName, appmode, ...rotateProps} = props;
   const visibletable = robotNameList.map(()=>false);
   const findindex = robotNameList.findIndex((e)=>e===robotName);
   if(findindex >= 0){
@@ -169,7 +170,7 @@ const Select_Robot = (props)=>{
     Model.current = robotModelMap[robotName];
   }, [updateRobot]);
   return (<>
-    <Model.current visible={visibletable[0]} {...rotateProps}/>
+    <Model.current visible={visibletable[0]} appmode={appmode} {...rotateProps}/>
   </>);
 }
 

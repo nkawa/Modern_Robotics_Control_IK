@@ -42,6 +42,10 @@ export default function useMqtt({
   useEffect(() => {
     // connect to MQTT broker  
     if (typeof window.mqttClient === 'undefined') {
+      if (props.appmode === AppMode.practice) { // 練習モードは　MQTT 接続しない
+        return;
+      }
+
       if (props.appmode != AppMode.viewer) {
         window.mqttClient = connectMQTT(requestRobot);
       } else { // Viewer modeでは、 request しない
@@ -220,7 +224,9 @@ export default function useMqtt({
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      window.mqttClient.off('message', handler);
+      if (window.mqttClient) {
+        window.mqttClient.off('message', handler);
+      }
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);

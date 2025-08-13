@@ -117,7 +117,7 @@ export default function RobotScene(props) {
         <Assets robot_model={robot_model} appmode={props.appmode} />
 
         {/* Robot */}
-        <Select_Robot {...robotProps} />
+        <Select_Robot appmode={props.appmode} {...robotProps}  />
         {/* Light */}
         <a-entity light="type: directional; color: #FFF; intensity: 0.25" position="1 1 1"></a-entity>
         <a-entity light="type: directional; color: #FFF; intensity: 0.25" position="-1 1 1"></a-entity>
