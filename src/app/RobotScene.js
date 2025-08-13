@@ -42,26 +42,27 @@ export default function RobotScene(props) {
   }
 
   // definition of the end link axes marker
-  const axis_length = 0.210;
+  const axis_length = 0.050;
   const cyl_length = (axis_length / 2).toString();
-  const cyl_hight = (axis_length).toString();
+  const cyl_height = (axis_length).toString();
   const cyl_radius = '0.0035';
-  const origin_marker_radius = '0.012';
+  const origin_marker_radius = '0.008';
   const origin_marker_size = `${origin_marker_radius} ${origin_marker_radius} ${origin_marker_radius}`;
   const origin_marker_color = 'blue';
+  const opacity = "0.3";
   const end_link = (
     <a-entity end-link position={`0 0 0`} rotation={`0 0 0`}>
       <a-sphere
         scale={origin_marker_size}
         color={origin_marker_color}
-        visible={true}>
+        visible={true} opacity={opacity}>
       </a-sphere>
       <a-cylinder position={`${cyl_length} 0 0`} rotation={`0 0 -90`}
-        height={cyl_hight} radius={cyl_radius} color="red" />
+        height={cyl_height} radius={cyl_radius} color="red" opacity={opacity} />
       <a-cylinder position={`0 ${cyl_length} 0`} rotation={`0 0 0`}
-        height={cyl_hight} radius={cyl_radius} material='color: #00ff00' />
+        height={cyl_height} radius={cyl_radius} material='color: #00ff00' opacity={opacity} />
       <a-cylinder position={`0 0 ${cyl_length}`} rotation={`90 0 0`}
-        height={cyl_hight} radius={cyl_radius} color="blue" />
+        height={cyl_height} radius={cyl_radius} color="blue" opacity={opacity} />
     </a-entity>
   );
   // definition of the end link axes marker

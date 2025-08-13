@@ -192,7 +192,8 @@ export default function DynamicHome(props) {
   }
   const theta_body_initial_map = {
 //    'jaka_zu_5': [0, 110, 90, 70, -90, 90].map(x => x * Math.PI / 180),
-    'jaka_zu_5': [-270, 110, 90, 70, -90, 90].map(x => x * Math.PI / 180),
+//    'jaka_zu_5': [-270, 110, 90, 70, -90, 90].map(x => x * Math.PI / 180),
+    'jaka_zu_5': [-270, 100, 80, 70, -90, 90].map(x => x * Math.PI / 180),
     'agilex_piper': piperMr2urdf([0, -15, 82.6, 0, 70, 0].map(x => x * Math.PI / 180)),
   };
   const [theta_body, setThetaBody] = React.useState(() => {
@@ -221,17 +222,15 @@ export default function DynamicHome(props) {
   // const useWorkerRef = React.useRef(true); // Flag to indicate if the worker is ready
   React.useEffect(() => {
     if (workerRef.current === null) {
-      console.log("******** Creating new worker ********");
+      console.log("******** Creating new worker ********");// これを MQTT接続の後で、初期状態が決まったあとにすべき。
       // need to check current working directory
       // console.log("Check Worker path dir: ", window.location.pathname);
       const simplePath = window.location.pathname.replace(/\/+$/, "")
       // パスを分割（空文字除去）
       const parts = simplePath.split("/").filter(Boolean);
       // 最初の階層だけ返す（なければルート）
-      const rewriteDir = parts.length > 1 ? `/${parts[0]}/` : "/";
-
+      const rewriteDir = parts.length >= 1 ? `/${parts[0]}/` : "/";
       const workerPath = rewriteDir + 'worker.js';
-      console.log("Check Worker path dir: ", workerPath);
       workerRef.current = new Worker(workerPath, { type: 'module' });
       console.log("workerRef.current: ", workerRef.current);
       workerRef.current.onmessage = (event) => {

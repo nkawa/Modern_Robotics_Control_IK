@@ -27,7 +27,7 @@ const simplePath = self.location.pathname.replace(/\/+$/, "")
       // パスを分割（空文字除去）
 const parts = simplePath.split("/").filter(Boolean);
       // 最初の階層だけ返す（なければルート）
-const rewriteDir = parts.length > 1 ? `/${parts[0]}/` : "/";
+const rewriteDir = parts.length >= 1 ? `/${parts[0]}/` : "/";
 
 const modulePath = rewriteDir + 'wasm/slrm_module.js';
 
