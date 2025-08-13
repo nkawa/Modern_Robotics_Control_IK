@@ -59,7 +59,10 @@ export default function DynamicHome(props) {
   // initilize Modern Robotics parameters
   // Load Robot Model
   const [robot_model, set_robot_model] = React.useState(robotName); // Change this to your robot model
-  const [toolLimit] = React.useState({ min: -1, max: 89 });
+
+  // 
+  const toolLimitList = [{ min: -1, max: 89 }, { min: -1, max: 89 }]; 
+  const [toolLimit, setToolLimit] = React.useState(toolLimitList[robotNameList.indexOf(robot_model)] || { min: -1, max: 89 });
 
 
   const vrModeRef = React.useRef(false);
@@ -73,7 +76,7 @@ export default function DynamicHome(props) {
   });
 
   const [selectedMode, setSelectedMode] = React.useState('control');
-  const [toolCaught, setToolCaught] = React.useState(true); // アームの把持状態
+  const [toolCaught, setToolCaught] = React.useState(false); // アームの把持状態
 
   const robotIDRef = React.useRef("none"); // 
 //  console.log("robotIDRef:", robotIDRef.current, "id:", idtopic);
@@ -87,7 +90,7 @@ export default function DynamicHome(props) {
 
 
   const [c_pos_x, set_c_pos_x] = React.useState(0)
-  const [c_pos_y, set_c_pos_y] = React.useState(0.5)
+  const [c_pos_y, set_c_pos_y] = React.useState(0.9)
   const [c_pos_z, set_c_pos_z] = React.useState(0.9)
   const [c_deg_x, set_c_deg_x] = React.useState(0)
   const [c_deg_y, set_c_deg_y] = React.useState(0)
@@ -619,10 +622,11 @@ export default function DynamicHome(props) {
   useMqtt({
     props,
     requestRobot,
+	  toolCaught,
+	  setToolCaught,
     setThetaBody: setThetaBody,
     setThetaTool: setThetaTool,
     robotIDRef,
-    toolCaught, setToolCaught,
     MQTT_DEVICE_TOPIC,
     MQTT_CTRL_TOPIC,
     MQTT_ROBOT_STATE_TOPIC,

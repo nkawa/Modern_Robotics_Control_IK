@@ -8,6 +8,8 @@ let receive_state = false // ロボットの状態を受信してるかのフラ
 // Try to make independent MQTT functions
 export default function useMqtt({
   props,
+  toolCaught,
+  setToolCaught,
   requestRobot,
   setThetaBody,
   setThetaTool,
@@ -64,8 +66,8 @@ export default function useMqtt({
           }
           if (data.tool != undefined) {
             setThetaTool(prev => {
-              if (JSON.stringify(prev) !== JSON.stringify(data.tool)) {
-                return data.tool;
+              if (JSON.stringify(prev) !== JSON.stringify(data.tool.width)) {
+                return data.tool.width;
               }
               //             console.log("Time:", data.time, "From:", topic, "Send Joint Tool:", data.tool);
               return prev;
@@ -107,19 +109,24 @@ export default function useMqtt({
           // ここで、joints の安全チェックをすべき
           //mqttclient.unsubscribe(MQTT_ROBOT_STATE_TOPIC+robotIDRef.current) // これでロボット姿勢の受信は終わり
           if (firstReceiveJoint ) {
-            console.log("Receive Robot Joints:", joints);
+//            console.log("Receive Robot Joints:", joints);
 
           // 受け取った位置をセットする
             setThetaBody(prev => {
+//              console.log("setThetaBody:", data.joints);
               const thetaJoints = data.joints.map(angle => angle * Math.PI / 180); // Convert to radians
               if (JSON.stringify(prev) !== JSON.stringify(thetaJoints)) {
+                console.log("Set Robot Joints:", thetaJoints);
                 return thetaJoints;
               }
               return prev;
-            })
-          }
+            });
+            const tool = data.tool;
+            const toolAngle = tool.width || 0; // Default to 0 if not provided
+            setThetaTool(prev => {
+              return toolAngle;
+            });
 
-          if (firstReceiveJoint) { // 本当はダメ！ // TCP を設定したい。
             firstReceiveJoint = false
             window.setTimeout(() => {
               console.log("Start to send movement!", robotIDRef.current);
@@ -131,18 +138,18 @@ export default function useMqtt({
           // すでに位置が動いていたら
           if (!firstReceiveJoint){ // 把持状態などのモニタリング
             const forces = data.forces;
-            if (forces != undefined) {
-              console.log("Receive Robot Forces:", forces);
-            }
-            const tools = data.tools;
-            if (tools != undefined) {
-              console.log("Receive Robot Tools:", tools);
-              if (tools.caught !== undefined) { //  把持状態を更新
-                if (tools.caught === 1) {
+//            if (forces != undefined) {
+//              console.log("Receive Robot Forces:", forces);
+//            }
+            const tool = data.tool;
+            if (tool != undefined) {
+//              console.log("Receive Robot Tools:", tool);
+              if (tool.caught !== undefined) { //  把持状態を更新
+                if (tool.caught === 1) {
                   // 表示させたい
-                  props.setToolCaught(true);
+                  setToolCaught(true);
                 }else{
-                  props.setToolCaught(false);
+                  setToolCaught(false);
                 }
               }
             }

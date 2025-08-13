@@ -263,7 +263,7 @@ export default function registerAframeComponents(options) {
           xrSession.requestAnimationFrame(onXRFrameMQTT);
         }
         set_c_pos_x(0);
-        set_c_pos_y(-0.6);
+        set_c_pos_y(-0.3);
         set_c_pos_z(0.90);
         set_c_deg_x(0);
         set_c_deg_y(0);
