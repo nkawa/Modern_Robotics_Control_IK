@@ -5,6 +5,25 @@ import { AppMode } from './appmode.js';
 let firstReceiveJoint = true; // 初回のロボット姿勢を受け取るまで、動作しない
 let receive_state = false // ロボットの状態を受信してるかのフラグ
 
+
+// Interval で Ready になるまで呼び出す
+function waitState(readyState, callback) {
+  let count = 0;
+  const interval = setInterval(() => {
+    count++;
+    if (count > 100) { // 10秒待つ
+      clearInterval(interval);
+      console.warn("Worker is not ready after 10 seconds");
+      return;
+    }
+    if (readyState.current) {
+      console.log("Worker is ready after", count * 100, "ms");
+      clearInterval(interval);
+      callback();
+    }
+  }, 100); // Check every 100ms
+}
+
 // Try to make independent MQTT functions
 export default function useMqtt({
   props,
@@ -14,6 +33,8 @@ export default function useMqtt({
   setThetaBody,
   setThetaTool,
   robotIDRef,
+  workerRef,
+  workerReadyState,
   MQTT_DEVICE_TOPIC,
   MQTT_CTRL_TOPIC,
   MQTT_ROBOT_STATE_TOPIC,
@@ -93,6 +114,12 @@ export default function useMqtt({
           console.log(" MQTT Device Topic: ", message.toString());
           if (data.devId === "none") {
             console.log("Can't find robot!")
+            // for DEBUG!
+//            robotIDRef.current = "JAKA-control"
+//            subscribeMQTT([
+//                MQTT_ROBOT_STATE_TOPIC + robotIDRef.current // 接続した実ロボットの姿勢を待つ
+//            ])
+
           } else {
             robotIDRef.current = data.devId
             if (receive_state === false) { // ロボットの姿勢を受け取るまで、スタートしない。
@@ -111,13 +138,35 @@ export default function useMqtt({
           if (firstReceiveJoint ) {
 //            console.log("Receive Robot Joints:", joints);
 
-          // 受け取った位置をセットする
+          // 受け取った位置を 各Joint に Worker 経由でセットする
             setThetaBody(prev => {
-//              console.log("setThetaBody:", data.joints);
               const thetaJoints = data.joints.map(angle => angle * Math.PI / 180); // Convert to radians
-              if (JSON.stringify(prev) !== JSON.stringify(thetaJoints)) {
-                console.log("Set Robot Joints:", thetaJoints);
-                return thetaJoints;
+              const myJoints = [thetaJoints[0], thetaJoints[1], thetaJoints[2], thetaJoints[3], thetaJoints[4], thetaJoints[5]];
+              if (JSON.stringify(prev) !== JSON.stringify(myJoints)) {
+//                console.log("Set Robot Joints:", prev, myJoints);
+                // ここで Worker にも送るべし！
+                if (workerRef.current != null) {
+                  // ここで、worker がready になるまで待つ
+                  if (workerReadyState===undefined){
+                    console.warn("Worker state is not initialized",workerReadyState);
+                  }else{
+                    waitState(workerReadyState, () => {
+                      workerRef.current.postMessage({
+                          type: 'set_initial_joints',
+                          joints: myJoints
+                      });
+                      // 本当は、上記で pose が来て初めてOKのはず
+                    window.setTimeout(() => {
+                      console.log("Start to send movement!", robotIDRef.current);
+                      receive_state = true; // 受信状態にする
+                    publishMQTT("dev/" + robotIDRef.current, JSON.stringify({ controller: "browser", devId: idtopic })) // 自分の topic を教える
+                      },300);
+                      });
+                  }
+                }else{
+                  console.warn("Worker is not ready, can't set initial joints");
+                }
+                return myJoints;
               }
               return prev;
             });
@@ -128,11 +177,6 @@ export default function useMqtt({
             });
 
             firstReceiveJoint = false
-            window.setTimeout(() => {
-              console.log("Start to send movement!", robotIDRef.current);
-              receive_state = true; //
-              publishMQTT("dev/" + robotIDRef.current, JSON.stringify({ controller: "browser", devId: idtopic })) // 自分の topic を教える
-            },500);
           }
 
           // すでに位置が動いていたら

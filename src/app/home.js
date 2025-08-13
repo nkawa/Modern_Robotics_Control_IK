@@ -216,9 +216,11 @@ export default function DynamicHome(props) {
   // ****************
   // Worker thread generation
   const workerRef = React.useRef(null);
+  const workerReadyState = React.useRef(false);
   const workerLastJoints = React.useRef(null);
   const workerLastStatus = React.useRef(null);
   const workerLastPose = React.useRef(null);
+//  console.log("WorkerReadyState" , workerReadyState);
   // const useWorkerRef = React.useRef(true); // Flag to indicate if the worker is ready
   React.useEffect(() => {
     if (workerRef.current === null) {
@@ -237,9 +239,9 @@ export default function DynamicHome(props) {
         switch (event.data.type) {
           case 'ready':
             workerRef.current
-              .postMessage({
-                type: 'init', filename: robot_model
-                  + '/' + 'urdf.json' //robot_model,
+            	.postMessage({ type: 'init',
+			            filename: robot_model +'/'+'urdf.json', //robot_model
+			            linkShapes: robot_model +'/'+'shapes.json'
               });
             break;
           case 'generator_ready':
@@ -254,6 +256,8 @@ export default function DynamicHome(props) {
                 // joints: theta_body});
                 joints: theta_body_initial_map[robot_model]
               });
+            workerReadyState.current = true;
+            console.log("Worker state is ready");
             break;
           case 'joints':
             if (event.data.joints) {
@@ -422,7 +426,7 @@ export default function DynamicHome(props) {
       // }
     }
     // ** update the controller and end link pose at the trigger_on change
-//    console.log("controllerUpdate: ", controllerUpdate);
+    console.debug("controllerUpdate: ", controllerUpdate);
     let updateStartPose = false;
     if (baseLinkPoseInv.current !== null) {
       if (!trigger_on) {
@@ -625,6 +629,8 @@ export default function DynamicHome(props) {
 	  setToolCaught,
     setThetaBody: setThetaBody,
     setThetaTool: setThetaTool,
+    workerRef: workerRef,
+    workerReadyState: workerReadyState,
     robotIDRef,
     MQTT_DEVICE_TOPIC,
     MQTT_CTRL_TOPIC,

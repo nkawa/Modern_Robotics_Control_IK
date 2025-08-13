@@ -127,8 +127,8 @@ export default function StereoVideo(props) {
                 
             });
             recvonly.on('timeline', (event) => {
-                console.log("Timeline Event from sora:", event);
-                
+//                console.log("Timeline Event from sora:", event);
+              
             });
             
 

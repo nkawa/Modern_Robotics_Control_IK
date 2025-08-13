@@ -20,6 +20,7 @@ export var idtopic = userUUID;
 export const connectMQTT = (callback) => {
     if (mqttclient == null) {
         const client = new mqtt.connect(MQTT_BROKER_URL, {protocolVersion: 5}); // noLocal を指定するため Version5 で接続
+        console.log("Initialize MQTT Client", client);
         client.on("connect", () => {
             console.log("MQTT Connected", client);
 
