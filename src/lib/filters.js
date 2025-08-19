@@ -113,46 +113,57 @@ export class MovingAveragePositionFilter {
     }
 }
 
-export const emphasizeMovementFilter = (position, params = {
+
+const MOVEMENT_EMPHASIZE_DEFAULTS = {
     threshold: 0.001 / 35,
     accelerationExponent: 2.3,
     accelerationFactor: 180000 * Math.pow(35, 2.3),
     maxAcceleration: 3,
-}) => {
-    const movementDistance = position.length(); // Vector3のlength()メソッド使用
-    const emphasizedScale = calculateEmphasizeScale(movementDistance, params);
-    return position.clone().multiplyScalar(emphasizedScale); // Vector3のメソッド使用
-}
+};
 
-export const emphasizeRotationFilter = (quaternion, params = {
+const ROTATION_EMPHASIZE_DEFAULTS = {
     threshold: 0.005 / 35,
     accelerationExponent: 2.3,
     accelerationFactor: 1500 * Math.pow(35, 2.3),
     maxAcceleration: 3,
-}) => {
-    const { radian: rotationRadian } = quaternionToAngle(quaternion);
+};
+
+const MOVEMENT_SUPPRESS_DEFAULTS = {
+    threshold: 0.05 / 35,
+    suppressionExponent: 1.5,
+    suppressionFactor: 500 * Math.pow(35, 1.5),
+    minSuppression: 0.001,
+};
+
+const ROTATION_SUPPRESS_DEFAULTS = {
+    threshold: 0.01 / 35,
+    suppressionExponent: 1.5,
+    suppressionFactor: 10 * Math.pow(35, 1.5),
+    minSuppression: 0.0001,
+};
+
+export const emphasizeMovementFilter = (position, params = MOVEMENT_EMPHASIZE_DEFAULTS) => {
+    const movementDistance = position.length();
+    const emphasizedScale = calculateEmphasizeScale(movementDistance, params);
+    return position.clone().multiplyScalar(emphasizedScale);
+}
+
+export const emphasizeRotationFilter = (quaternion, params = ROTATION_EMPHASIZE_DEFAULTS) => {
+    const q = quaternion.clone().normalize();
+    const rotationRadian = 2 * Math.acos(Math.abs(q.w));
     const emphasizedScale = calculateEmphasizeScale(rotationRadian, params);
     return scaleQuaternion(quaternion, emphasizedScale);
 }
 
-export const suppressMovementFilter = (position, quaternion, params = {
-    threshold: 0.01 / 35,
-    suppressionExponent: 1.5,
-    suppressionFactor: 500 * Math.pow(35, 1.5),
-    minSuppression: 0.001,
-}) => {
-    const { radian: rotationRadian } = quaternionToAngle(quaternion);
+export const suppressMovementFilter = (position, quaternion, params = MOVEMENT_SUPPRESS_DEFAULTS) => {
+    const q = quaternion.clone().normalize();
+    const rotationRadian = 2 * Math.acos(Math.abs(q.w));
     const suppressedScale = calculateSuppressScale(rotationRadian, params);
-    return position.clone().multiplyScalar(suppressedScale); // Vector3のメソッド使用
+    return position.clone().multiplyScalar(suppressedScale);
 }
 
-export const suppressRotationFilter = (position, quaternion, params = {
-    threshold: 0.01 / 35,
-    suppressionExponent: 1.5,
-    suppressionFactor: 10 * Math.pow(50, 1.5),
-    minSuppression: 0.0001,
-}) => {
-    const movementDistance = position.length(); // Vector3のlength()メソッド使用
+export const suppressRotationFilter = (position, quaternion, params = ROTATION_SUPPRESS_DEFAULTS) => {
+    const movementDistance = position.length();
     const suppressedScale = calculateSuppressScale(movementDistance, params);
     return scaleQuaternion(quaternion, suppressedScale);
 }
@@ -162,7 +173,7 @@ const calculateEmphasizeScale = (motionDifference, params) => {
     const normalizedInput = motionDifference - params.threshold;
     const curvedInput = Math.pow(normalizedInput, params.accelerationExponent);
     const acceleration = 1.0 + curvedInput * params.accelerationFactor;
-
+    
     return Math.min(acceleration, params.maxAcceleration);
 }
 
@@ -170,34 +181,13 @@ const calculateSuppressScale = (motionDifference, params) => {
     if (motionDifference < params.threshold) return 1.0;
     const normalizedInput = Math.min((motionDifference - params.threshold), 1.0);
     const curvedInput = Math.pow(normalizedInput, params.suppressionExponent);
-
+    
     return Math.max(1.0 - (curvedInput * params.suppressionFactor), params.minSuppression);
 }
 
 export const scaleQuaternion = (quaternion, factor) => {
-    const identity = new THREE.Quaternion()
-    const scaledQuaternion = new THREE.Quaternion()
-    scaledQuaternion.slerpQuaternions(identity, quaternion, factor)
-    return scaledQuaternion
-}
-
-const quaternionToAngle = (q) => {
-    const radian = 2 * Math.acos(round(q.w))
-    if (radian === 0) {
-        return { radian, axis: new THREE.Vector3(0, 0, 0) }
-    }
-    const sinHalfAngle = Math.sqrt(1 - q.w * q.w)
-    if (sinHalfAngle > 0) {
-        const axisX = (q.x / sinHalfAngle)
-        const axisY = (q.y / sinHalfAngle)
-        const axisZ = (q.z / sinHalfAngle)
-        return { angle, radian, axis: new THREE.Vector3(axisX, axisY, axisZ) }
-    } else {
-        return { angle, radian, axis: new THREE.Vector3(0, 0, 0) }
-    }
-}
-
-const round = (x, d = 5) => {
-    const v = 10 ** (d | 0)
-    return Math.round(x * v) / v
+    const identity = new THREE.Quaternion();
+    const scaledQuaternion = new THREE.Quaternion();
+    scaledQuaternion.slerpQuaternions(identity, quaternion, factor);
+    return scaledQuaternion;
 }

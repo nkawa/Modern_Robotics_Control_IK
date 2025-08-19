@@ -396,8 +396,8 @@ export default function DynamicHome(props) {
 
 
         //　フィルタ適用
-        let filteredPosDiff = deltaPos.clone().multiplyScalar(1/4/18);
-        let filteredQuatDiff = scaleQuaternion(deltaQuat, 1/4/18)
+        let filteredPosDiff = deltaPos.clone().multiplyScalar(1/68); // 基本スケール(1/4) * 速度への変換(大体17msecおき)
+        let filteredQuatDiff = scaleQuaternion(deltaQuat, 1/68)
 
         filteredPosDiff = positionNoizeFilterRef.current.applyFilter(filteredPosDiff)
         filteredQuatDiff = quaternionNoizeFilterRef.current.applyFilter(filteredQuatDiff)
@@ -407,9 +407,8 @@ export default function DynamicHome(props) {
         filteredPosDiff = suppressMovementFilter(filteredPosDiff, filteredQuatDiff)
         filteredQuatDiff = suppressRotationFilter(filteredPosDiff, filteredQuatDiff)
 
-        
-        filteredPosDiff.multiplyScalar(18);
-        filteredQuatDiff = scaleQuaternion(filteredQuatDiff, 18)
+        filteredPosDiff.multiplyScalar(17);
+        filteredQuatDiff = scaleQuaternion(filteredQuatDiff, 17)
 
 
         const filteredDeltaController = new THREE.Matrix4();
@@ -429,26 +428,26 @@ export default function DynamicHome(props) {
 
         // 差分スケーリング
         // reduce controller movement by 0.25 -- 1.00
-        const magnification = controllerMagnificationUsed.current;
-        const posDiff = new THREE.Vector3();
-        const quatDiff = new THREE.Quaternion();
-        const scale = new THREE.Vector3();
-        controllerDiff.decompose(posDiff, quatDiff, scale);
-        const quaterPosDiff = posDiff.clone().multiplyScalar(magnification);
-        // console.debug('quaterPosDiff: ' + quaterPosDiff.x.toFixed(3)
-        // 		  + ', ' + quaterPosDiff.y.toFixed(3)
-        // 		  + ', ' + quaterPosDiff.z.toFixed(3));
-        const quaterQuatDiff = quatDiff.clone(); // .multiplyScalar(0.25);
-        quaterQuatDiff.x *= magnification;
-        quaterQuatDiff.y *= magnification;
-        quaterQuatDiff.z *= magnification;
-        const wAbs = Math.sqrt(1.0 - (quaterQuatDiff.x ** 2
-          + quaterQuatDiff.y ** 2
-          + quaterQuatDiff.z ** 2));
-        quaterQuatDiff.w = quaterQuatDiff.w >= 0 ? wAbs : -wAbs;
-        const scale1 = new THREE.Vector3(1, 1, 1);
-        // const matrixDiff = new THREE.Matrix4();
-        // matrixDiff.compose(quaterPosDiff, quaterQuatDiff, scale1);
+        // const magnification = controllerMagnificationUsed.current;
+        // const posDiff = new THREE.Vector3();
+        // const quatDiff = new THREE.Quaternion();
+        // const scale = new THREE.Vector3();
+        // controllerDiff.decompose(posDiff, quatDiff, scale);
+        // const quaterPosDiff = posDiff.clone().multiplyScalar(magnification);
+        // // console.debug('quaterPosDiff: ' + quaterPosDiff.x.toFixed(3)
+        // // 		  + ', ' + quaterPosDiff.y.toFixed(3)
+        // // 		  + ', ' + quaterPosDiff.z.toFixed(3));
+        // const quaterQuatDiff = quatDiff.clone(); // .multiplyScalar(0.25);
+        // quaterQuatDiff.x *= magnification;
+        // quaterQuatDiff.y *= magnification;
+        // quaterQuatDiff.z *= magnification;
+        // const wAbs = Math.sqrt(1.0 - (quaterQuatDiff.x ** 2
+        //   + quaterQuatDiff.y ** 2
+        //   + quaterQuatDiff.z ** 2));
+        // quaterQuatDiff.w = quaterQuatDiff.w >= 0 ? wAbs : -wAbs;
+        // const scale1 = new THREE.Vector3(1, 1, 1);
+        // // const matrixDiff = new THREE.Matrix4();
+        // // matrixDiff.compose(quaterPosDiff, quaterQuatDiff, scale1);
 
         const matrixDiff = controllerDiff.clone()
         //
