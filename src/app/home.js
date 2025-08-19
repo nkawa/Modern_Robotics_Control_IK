@@ -11,6 +11,7 @@ import { three2worldMatGen, world2threeMatGen } from './constTransformGen';
 import { AppMode } from './appmode.js';
 import StereoVideo from '../lib/stereoWebRTC.js';
 
+import {MovingAveragePositionFilter, MovingAverageQuaternionFilter, emphasizeMovementFilter, emphasizeRotationFilter, suppressMovementFilter, suppressRotationFilter, scaleQuaternion} from '../lib/filters.js'
 
 // const mr = require('../modern_robotics/modern_robotics_core.js');
 // // const RobotKinematics = require('../modern_robotics/modern_robotics_Kinematics.js');
@@ -21,23 +22,23 @@ import StereoVideo from '../lib/stereoWebRTC.js';
 // MQTT Topics
 const MQTT_REQUEST_TOPIC = "mgr/request";
 const MQTT_DEVICE_TOPIC = "dev/" + idtopic;
-const MQTT_CTRL_TOPIC = "control/" ;
-const MQTT_CTRL_TOPIC_ID = "control/"+idtopic ;
+const MQTT_CTRL_TOPIC = "control/";
+const MQTT_CTRL_TOPIC_ID = "control/" + idtopic;
 const MQTT_ROBOT_STATE_TOPIC = "robot/";
 
 console.log("MQTT_DEVICE_TOPIC", MQTT_DEVICE_TOPIC);
 
 // 再レンダリングしなくて値を更新する（かつ set_update で再レンダリングさせられる）
-function useRefState(updateFunc=undefined,initialValue=undefined) {
+function useRefState(updateFunc = undefined, initialValue = undefined) {
   const ref = React.useRef(initialValue);
-  function setValue(arg){
+  function setValue(arg) {
     if (typeof arg === 'function') {
       ref.current = arg(ref.current)
-    }else{
+    } else {
       ref.current = arg
     }
-    if(updateFunc){
-      updateFunc((v)=>v=v+1)
+    if (updateFunc) {
+      updateFunc((v) => v = v + 1)
     }
   }
   return [ref.current, setValue, ref];
@@ -48,8 +49,8 @@ export default function DynamicHome(props) {
   // Generate constant transformation matrices (THREE.Matrix4)
   const [three2worldMat] = React.useState(() => three2worldMatGen());
   const [world2threeMat] = React.useState(() => world2threeMatGen());
-//  console.debug("three2worldMat: ", three2worldMat.elements);
-//  console.debug("world2threeMat: ", world2threeMat.elements);
+  //  console.debug("three2worldMat: ", three2worldMat.elements);
+  //  console.debug("world2threeMat: ", world2threeMat.elements);
 
   const [now, setNow] = React.useState(new Date())
   const [rendered, set_rendered] = React.useState(false)
@@ -61,7 +62,7 @@ export default function DynamicHome(props) {
   const [robot_model, set_robot_model] = React.useState(robotName); // Change this to your robot model
 
   // 
-  const toolLimitList = [{ min: -1, max: 89 }, { min: -1, max: 89 }]; 
+  const toolLimitList = [{ min: -1, max: 89 }, { min: -1, max: 89 }];
   const [toolLimit, setToolLimit] = React.useState(toolLimitList[robotNameList.indexOf(robot_model)] || { min: -1, max: 89 });
 
 
@@ -79,14 +80,14 @@ export default function DynamicHome(props) {
   const [toolCaught, setToolCaught] = React.useState(false); // アームの把持状態
 
   const robotIDRef = React.useRef("none"); // 
-//  console.log("robotIDRef:", robotIDRef.current, "id:", idtopic);
+  //  console.log("robotIDRef:", robotIDRef.current, "id:", idtopic);
   // VR camera pose
   //      set_c_pos_x(0);
-   //     set_c_pos_y(-0.6);
-   //     set_c_pos_z(0.90);
-   //     set_c_deg_x(0);
- //       set_c_deg_y(0);
-   //     set_c_deg_z(0);
+  //     set_c_pos_y(-0.6);
+  //     set_c_pos_z(0.90);
+  //     set_c_deg_x(0);
+  //       set_c_deg_y(0);
+  //     set_c_deg_z(0);
 
 
   const [c_pos_x, set_c_pos_x] = React.useState(0)
@@ -99,10 +100,10 @@ export default function DynamicHome(props) {
   const [updateRobot, setUpdateRobot] = React.useState(0)
   const [dsp_message, set_dsp_message] = React.useState("XXX")
 
-// for useRefState
-  const [update , set_update] = React.useState(0);
-// WebRTCの統計情報を記録
-  const [rtcStats, set_rtcStats, rtcStats_ref ] = useRefState(set_update,[])
+  // for useRefState
+  const [update, set_update] = React.useState(0);
+  // WebRTCの統計情報を記録
+  const [rtcStats, set_rtcStats, rtcStats_ref] = useRefState(set_update, [])
 
 
   const green_color = 'lime';
@@ -127,6 +128,18 @@ export default function DynamicHome(props) {
     controllerStartInv.current = null;
   }, [robot_model]);
 
+  // controller pose
+  const lastControllerPose = React.useRef(new THREE.Matrix4());
+  const cumulativeControllerPose = React.useRef(new THREE.Matrix4());
+  const positionNoizeFilterRef = React.useRef(null);
+  const quaternionNoizeFilterRef = React.useRef(null);
+  if (positionNoizeFilterRef.current === null) {
+    positionNoizeFilterRef.current = new MovingAveragePositionFilter();
+  }
+  if (quaternionNoizeFilterRef.current === null) {
+    quaternionNoizeFilterRef.current = new MovingAverageQuaternionFilter();
+  }
+
   //*** controller mode change functions
   // 20250801 no mode.
   const [controllerModeChange] = React.useState(() => {
@@ -135,15 +148,15 @@ export default function DynamicHome(props) {
     return (incr) => {
       modeNumber += incr;
       if (modeNumber < 0) {
-  modeNumber = controllerMode.length - 1;
+        modeNumber = controllerMode.length - 1;
       } else if (modeNumber >= controllerMode.length) {
-  modeNumber = 0;
+        modeNumber = 0;
       }
-//      console.debug("Controller Mode changed to: ", controllerMode[modeNumber]);
+      //      console.debug("Controller Mode changed to: ", controllerMode[modeNumber]);
       return controllerMode[modeNumber];
     };
   });
-  
+
 
   // *** function that sets the end effector point in the worker thread
   const [toolPointMover] = React.useState(() => {
@@ -156,8 +169,8 @@ export default function DynamicHome(props) {
             type: 'set_end_effector_point',
             endEffectorPoint: toolPoint.toArray()
           });
-//        console.debug("Tool Point moved to: ", toolPoint.x.toFixed(3),
-//          toolPoint.y.toFixed(3), toolPoint.z.toFixed(3));
+        //        console.debug("Tool Point moved to: ", toolPoint.x.toFixed(3),
+        //          toolPoint.y.toFixed(3), toolPoint.z.toFixed(3));
       } else if (delta === null) {
         // reset
         toolPoint.x = 0; toolPoint.y = 0; toolPoint.z = 0.180;
@@ -191,8 +204,8 @@ export default function DynamicHome(props) {
     return mr;
   }
   const theta_body_initial_map = {
-//    'jaka_zu_5': [0, 110, 90, 70, -90, 90].map(x => x * Math.PI / 180),
-//    'jaka_zu_5': [-270, 110, 90, 70, -90, 90].map(x => x * Math.PI / 180),
+    //    'jaka_zu_5': [0, 110, 90, 70, -90, 90].map(x => x * Math.PI / 180),
+    //    'jaka_zu_5': [-270, 110, 90, 70, -90, 90].map(x => x * Math.PI / 180),
     'jaka_zu_5': [-270, 100, 80, 70, -90, 90].map(x => x * Math.PI / 180),
     'agilex_piper': piperMr2urdf([0, -15, 82.6, 0, 70, 0].map(x => x * Math.PI / 180)),
   };
@@ -209,7 +222,7 @@ export default function DynamicHome(props) {
     toolPointMover(null);
     setUpdateRobot(updateRobot + 1);
 
-    
+
   }, [robot_model]);
 
 
@@ -260,7 +273,7 @@ export default function DynamicHome(props) {
               if (props.appmode !== AppMode.viewer) {
                 console.debug("Worker joint message:",
                   event.data.joints.map(x => x.toFixed(3)).join(', '));
-              // Always skip to the latest data
+                // Always skip to the latest data
                 workerLastJoints.current = event.data.joints;
               }
             }
@@ -281,7 +294,7 @@ export default function DynamicHome(props) {
     // **** set status text to "dsp_message" ****
     const intervalId = setInterval(() => {
       const controllerMode = controllerModeChange(0); // Get current controller mode
-      const messageText = ['MODE: '+ controllerMode];
+      const messageText = ['MODE: ' + controllerMode];
       switch (controllerMode) { // controllerMode) {
         case 'Normal':
           messageText
@@ -361,68 +374,111 @@ export default function DynamicHome(props) {
   const controllerMagnificationUsed = React.useRef(controllerMagnification.current);
   // *** a function that runs when the controller pose changes
   React.useEffect(() => {
-    console.log("Controller pose changed:", trigger_on,rendered, vrModeRef.current, endLinkPoseStart.current, baseLinkPoseInv.current);
+    // console.log("Controller pose changed:", trigger_on,rendered, vrModeRef.current, endLinkPoseStart.current, baseLinkPoseInv.current);
     // VR input period
     if (endLinkPoseStart.current !== null &&
       baseLinkPoseInv.current !== null &&
       rendered && vrModeRef.current && trigger_on) {
 
-      console.log("Controll started with trigger_on:", trigger_on);  
+      // console.log("Controll started with trigger_on:", trigger_on);  
       // base_B^{-1}: start^-1: controllerStartInv.current
       // base_E: goal: controllerCurrentWorld
       // base_S: begin: endLinkPoseStart.current
       // base_S': 原点はB, 向きはS
       // base_G: end: to be calculated
       const controllerCurrentWorld = three2worldMat.clone().multiply(controller_object);
-      const controllerDiff = controllerStartInv.current.clone().multiply(controllerCurrentWorld);
-      const controllerTend = controllerStartInv.current.clone().multiply(endLinkPoseStart.current);
-      controllerTend.extractRotation(controllerTend);
-      const endTcontroller = controllerTend.clone().transpose();
-      //
-      // reduce controller movement by 0.25 -- 1.00
-      const magnification = controllerMagnificationUsed.current;
-      const posDiff = new THREE.Vector3();
-      const quatDiff = new THREE.Quaternion();
-      const scale = new THREE.Vector3();
-      controllerDiff.decompose(posDiff, quatDiff, scale);
-      const quaterPosDiff = posDiff.clone().multiplyScalar(magnification);
-      // console.debug('quaterPosDiff: ' + quaterPosDiff.x.toFixed(3)
-      // 		  + ', ' + quaterPosDiff.y.toFixed(3)
-      // 		  + ', ' + quaterPosDiff.z.toFixed(3));
-      const quaterQuatDiff = quatDiff.clone(); // .multiplyScalar(0.25);
-      quaterQuatDiff.x *= magnification;
-      quaterQuatDiff.y *= magnification;
-      quaterQuatDiff.z *= magnification;
-      const wAbs = Math.sqrt(1.0 - (quaterQuatDiff.x ** 2
-        + quaterQuatDiff.y ** 2
-        + quaterQuatDiff.z ** 2));
-      quaterQuatDiff.w = quaterQuatDiff.w >= 0 ? wAbs : -wAbs;
-      const scale1 = new THREE.Vector3(1, 1, 1);
-      const matrixDiff = new THREE.Matrix4();
-      matrixDiff.compose(quaterPosDiff, quaterQuatDiff, scale1);
-      //
-      //
-      const newEndLinkPose = endLinkPoseStart.current.clone()
-        .multiply(endTcontroller).multiply(matrixDiff)
-        .multiply(controllerTend);
-      console.debug("matrixDiff: ", matrixDiff.elements[12].toFixed(3),
-        matrixDiff.elements[13].toFixed(3),
-        matrixDiff.elements[14].toFixed(3));
-      console.debug("newEndLinkPose: ", newEndLinkPose.elements[12].toFixed(3),
-        newEndLinkPose.elements[13].toFixed(3),
-        newEndLinkPose.elements[14].toFixed(3));
-      // **** send to worker thread ****
-      workerRef.current.postMessage({
-        type: 'destination',
-        endLinkPose: newEndLinkPose.elements
-      });
-      // KinematicsControl(newEndLinkPose);
-      // if (workerLastJoints.current) {
-      // 	setThetaBody(workerLastJoints.current);
-      // }
+      if (!lastControllerPose.current.equals(new THREE.Matrix4())) {
+        const deltaControllerPose = lastControllerPose.current.clone().invert().multiply(controllerCurrentWorld);
+        const deltaPos = new THREE.Vector3();
+        const deltaQuat = new THREE.Quaternion();
+        const deltaScale = new THREE.Vector3();
+        deltaControllerPose.decompose(deltaPos, deltaQuat, deltaScale);
+
+
+        //　フィルタ適用
+        let filteredPosDiff = deltaPos.clone().multiplyScalar(1/68); // 基本スケール(1/4) * 速度への変換(大体17msecおき)
+        let filteredQuatDiff = scaleQuaternion(deltaQuat, 1/68)
+
+        filteredPosDiff = positionNoizeFilterRef.current.applyFilter(filteredPosDiff)
+        filteredQuatDiff = quaternionNoizeFilterRef.current.applyFilter(filteredQuatDiff)
+
+        filteredPosDiff = emphasizeMovementFilter(filteredPosDiff)
+        filteredQuatDiff = emphasizeRotationFilter(filteredQuatDiff)
+        filteredPosDiff = suppressMovementFilter(filteredPosDiff, filteredQuatDiff)
+        filteredQuatDiff = suppressRotationFilter(filteredPosDiff, filteredQuatDiff)
+
+        filteredPosDiff.multiplyScalar(17);
+        filteredQuatDiff = scaleQuaternion(filteredQuatDiff, 17)
+
+
+        const filteredDeltaController = new THREE.Matrix4();
+        filteredDeltaController.compose(filteredPosDiff, filteredQuatDiff, deltaScale);
+
+        const filteredControllerCurrentWorld = cumulativeControllerPose.current.clone().multiply(filteredDeltaController);
+        const controllerDiff = controllerStartInv.current.clone().multiply(filteredControllerCurrentWorld);
+
+        cumulativeControllerPose.current.copy(filteredControllerCurrentWorld)
+        lastControllerPose.current.copy(controllerCurrentWorld);
+
+        // 以下の処理はそのまま
+        const controllerTend = controllerStartInv.current.clone().multiply(endLinkPoseStart.current); // トリガー押下〜EEの変換
+        controllerTend.extractRotation(controllerTend);
+        const endTcontroller = controllerTend.clone().transpose();
+        //
+
+        // 差分スケーリング
+        // reduce controller movement by 0.25 -- 1.00
+        // const magnification = controllerMagnificationUsed.current;
+        // const posDiff = new THREE.Vector3();
+        // const quatDiff = new THREE.Quaternion();
+        // const scale = new THREE.Vector3();
+        // controllerDiff.decompose(posDiff, quatDiff, scale);
+        // const quaterPosDiff = posDiff.clone().multiplyScalar(magnification);
+        // // console.debug('quaterPosDiff: ' + quaterPosDiff.x.toFixed(3)
+        // // 		  + ', ' + quaterPosDiff.y.toFixed(3)
+        // // 		  + ', ' + quaterPosDiff.z.toFixed(3));
+        // const quaterQuatDiff = quatDiff.clone(); // .multiplyScalar(0.25);
+        // quaterQuatDiff.x *= magnification;
+        // quaterQuatDiff.y *= magnification;
+        // quaterQuatDiff.z *= magnification;
+        // const wAbs = Math.sqrt(1.0 - (quaterQuatDiff.x ** 2
+        //   + quaterQuatDiff.y ** 2
+        //   + quaterQuatDiff.z ** 2));
+        // quaterQuatDiff.w = quaterQuatDiff.w >= 0 ? wAbs : -wAbs;
+        // const scale1 = new THREE.Vector3(1, 1, 1);
+        // // const matrixDiff = new THREE.Matrix4();
+        // // matrixDiff.compose(quaterPosDiff, quaterQuatDiff, scale1);
+
+        const matrixDiff = controllerDiff.clone()
+        //
+        //
+        const newEndLinkPose = endLinkPoseStart.current.clone()
+          .multiply(endTcontroller).multiply(matrixDiff)
+          .multiply(controllerTend);
+        console.debug("matrixDiff: ", matrixDiff.elements[12].toFixed(3),
+          matrixDiff.elements[13].toFixed(3),
+          matrixDiff.elements[14].toFixed(3));
+        console.debug("newEndLinkPose: ", newEndLinkPose.elements[12].toFixed(3),
+          newEndLinkPose.elements[13].toFixed(3),
+          newEndLinkPose.elements[14].toFixed(3));
+        // **** send to worker thread ****
+        workerRef.current.postMessage({
+          type: 'destination',
+          endLinkPose: newEndLinkPose.elements
+        });
+        // KinematicsControl(newEndLinkPose);
+        // if (workerLastJoints.current) {
+        // 	setThetaBody(workerLastJoints.current);
+        // }
+      }
+      else {
+        console.log("init")
+        cumulativeControllerPose.current.copy(controllerCurrentWorld)
+        lastControllerPose.current.copy(controllerCurrentWorld);
+      }
     }
     // ** update the controller and end link pose at the trigger_on change
-//    console.log("controllerUpdate: ", controllerUpdate);
+    //    console.log("controllerUpdate: ", controllerUpdate);
     let updateStartPose = false;
     if (baseLinkPoseInv.current !== null) {
       if (!trigger_on) {
@@ -437,7 +493,7 @@ export default function DynamicHome(props) {
       }
       if (updateStartPose || endLinkPoseStart.current === null) {
         // do update start pose of end link
-        console.log("update start pose of end link",workerLastPose.current);
+        console.log("update start pose of end link", workerLastPose.current);
         if (workerLastPose.current) {
           endLinkPoseStart.current = endLinkPose.current.clone();
           // endLinkPoseStart.current = three2worldMat.clone()
@@ -456,6 +512,10 @@ export default function DynamicHome(props) {
           controllerStartInv.current.elements[12].toFixed(3),
           controllerStartInv.current.elements[13].toFixed(3),
           controllerStartInv.current.elements[14].toFixed(3));
+      }
+      if (updateStartPose || cumulativeControllerPose.current === null) {
+        cumulativeControllerPose.current.identity(); // 単位行列で初期化
+        lastControllerPose.current.identity(); // 前回姿勢もリセット
       }
     }
     controllerMagnificationPrev.current = controllerMagnification.current;
@@ -621,8 +681,8 @@ export default function DynamicHome(props) {
   useMqtt({
     props,
     requestRobot,
-	  toolCaught,
-	  setToolCaught,
+    toolCaught,
+    setToolCaught,
     setThetaBody: setThetaBody,
     setThetaTool: setThetaTool,
     robotIDRef,
@@ -636,7 +696,7 @@ export default function DynamicHome(props) {
 
   // Robot State Update Props
   const robotProps = React.useMemo(() => ({
-    updateRobot, robotNameList, robotName, theta_body, theta_tool , base_position,base_rotation,
+    updateRobot, robotNameList, robotName, theta_body, theta_tool, base_position, base_rotation,
     toolCaught
   }), [updateRobot, robotNameList, robotName, theta_body, theta_tool]);
 
