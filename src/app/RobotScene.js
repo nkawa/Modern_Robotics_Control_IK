@@ -19,6 +19,9 @@ const Line = (props) => {
   ></a-entity>
 }
 
+const nostats = (process.env.NEXT_PUBLIC_SHOW_STATS || "YES")=="NO"
+console.log("Nostat:",nostats)
+
 export default function RobotScene(props) {
   const {
     robot_model, rendered, robotProps, controllerProps,
@@ -133,10 +136,15 @@ export default function RobotScene(props) {
               text={`value: ${dsp_message}; color: ${dsp_color}; backgroundColor: rgb(31, 219, 131); border: #000000; whiteSpace: pre`}
               position="0 0.35 -1.4"
             />*/}
+            <a-entity id="UIBack">
+
+            </a-entity>
+            {nostats?<></>:
             <a-entity
                 text={`value: ${rtc_message}; color: gray; backgroundColor: rgb(31, 219, 131); border: #000000; whiteSpace: pre`}
                 position="0 0.35 -1.4" 
              />
+            }
 
           </a-camera>
         </a-entity>

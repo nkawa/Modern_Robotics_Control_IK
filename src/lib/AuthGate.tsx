@@ -8,7 +8,7 @@ import { logEnebular } from "./logEnebular";
 import { userUUID } from './cookie_id';
 
 // should run on client!
-const ALLOW_LIST = (process.env.ALLOW_METAWORK_BROWSERS).split(',')
+const ALLOW_LIST = (process.env.NEXT_PUBLIC_ALLOW_METAWORK_BROWSERS || "").split(',')
 
 type AuthGateProps = PropsWithChildren<{
   noauth?: boolean;  

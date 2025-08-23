@@ -9,8 +9,6 @@ import { mqttclient, idtopic, publishMQTT, codeType } from '../lib/MetaworkMQTT'
 import { three2worldMatGen, world2threeMatGen } from './constTransformGen';
 
 import { AppMode } from './appmode.js';
-import StereoVideo from '../lib/stereoWebRTC.js';
-
 
 // const mr = require('../modern_robotics/modern_robotics_core.js');
 // // const RobotKinematics = require('../modern_robotics/modern_robotics_Kinematics.js');

@@ -374,10 +374,10 @@ export default function StereoVideo(props) {
             if (set_RealSense) {
                 const videoPlane = document.createElement('a-plane');
                 videoPlane.setAttribute('id', 'videoPlate');
-                videoPlane.setAttribute('position', '-0.25 -0.15 -0.53');
+                videoPlane.setAttribute('position', '-0.10 .1 -0.53');
                 videoPlane.setAttribute('scale', '0.12 0.12 1');
-                videoPlane.setAttribute('width', '1.2');
-                videoPlane.setAttribute('height', '0.9');
+                videoPlane.setAttribute('width', '1.6');
+                videoPlane.setAttribute('height', '1.2');
                 videoPlane.setAttribute('material', 'src: #remotevideo-realsense;');
                 videoPlane.setAttribute('current-ui', '');
                 videoPlane.setAttribute('visible', true); //ワイプの手先カメラ表示

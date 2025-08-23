@@ -56,7 +56,7 @@ export async function GET(req : NextRequest) {
     // トークンが有効な場合、AuthContextを設定すべき
     // ここでは、metawork_tokenをクッキーに保存して、/practiceへリダイレクト
 
-    const res = NextResponse.redirect(new URL("/jaka/withCam", url.origin));
+    const res = NextResponse.redirect(new URL("/jaka/withDualCam", url.origin));
 
     res.cookies.set("worker_token", metawork_token, {
         httpOnly: true,
