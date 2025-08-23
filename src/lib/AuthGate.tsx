@@ -1,21 +1,28 @@
 "use client";
 // /components/AuthGate.tsx
 import React, { PropsWithChildren, useEffect } from "react";
-import { useAuth } from "@/context/auth";
+import { useAuth } from "../context/auth";
 import { usePathname, useRouter } from "next/navigation";
 
-import { logEnebular } from "@/lib/logEnebular";
+import { logEnebular } from "./logEnebular";
 import { userUUID } from './cookie_id';
 
 // should run on client!
+const ALLOW_LIST = (process.env.ALLOW_METAWORK_BROWSERS).split(',')
 
-export default function AuthGate({ children }: PropsWithChildren) {
+type AuthGateProps = PropsWithChildren<{
+  noauth?: boolean;  
+}>;
+
+export default function AuthGate({ noauth, children }: AuthGateProps) {
   const user = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   // Enabular に post したい
   //  logEnebular(pathName,'login','',
+
+  const [loaded, set_loaded] = React.useState(false);
 
 
   useEffect(() => {
@@ -29,13 +36,35 @@ export default function AuthGate({ children }: PropsWithChildren) {
       //    console.log('AuthGate user:', user, userUUID);
       const now = new Date();
       if (user !== undefined && user.user != null) {
+        const location = process.env.NEXT_BASE_PATH+pathname; // BASE_PATH もログに含める（Jaka か、わかるように）
         console.log("AuthGate:User:", user);
-        console.log("AuthGate:Log", pathname, 'login', user.user.kid, user.user.id, 'Login to ' + pathname, now.toLocaleString() + ":" + userUUID)
-        logEnebular(pathname, 'login', user.user.kid, user.user.id, 'Login to ' + pathname, now.toLocaleString() + ":" + userUUID)
+        console.log("AuthGate:Log", location, 'login', user.user.kid, user.user.id, 'Login to ' + location, now.toLocaleString() + ":" + userUUID)
+        logEnebular(location, 'login', user.user.kid, user.user.id, 'Login to ' + location, now.toLocaleString() + " " + userUUID)
+
+        if (ALLOW_LIST.some((prefix)=> userUUID.startsWith(prefix))){
+          console.log("Allowed browser:",userUUID);
+        }else{
+          if (noauth){
+            console.log("No check browser for noauth practice:",userUUID)
+          }else{  
+            window.location.href = window.location.host+"/nonuser"
+            // 無許可のブラウザは PIN入力に戻る（なので、使えないｗ
+            // ）
+          }
+        }
 
       } else {
-        console.log("AuthGate: under working...");
+        console.log("AuthGate: under working...",user);
+        set_loaded(user.loading)
+        if (loaded){
+          if (user.user === null && !noauth){
+            window.location.href =window.location.host+"/nonuser"
+          }
+        }
+
       }
+
+      
     }
 
   }, [user, router, pathname]);
@@ -53,6 +82,7 @@ export default function AuthGate({ children }: PropsWithChildren) {
     // リダイレクト中は何も描画しない
     return null;
   }
+
 
   // ログイン済み
   return <>{children}</>;

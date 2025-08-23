@@ -10,7 +10,7 @@ const DynamicHome = dynamic(() => import('../home.js'), { ssr: false });
 // この場合、MQTTは使わない？
 export default function Home() {
   return (
-    <AuthGate>
+    <AuthGate noauth={true}>
       <DynamicHome appmode={AppMode.practice} />
     </AuthGate>
   );
