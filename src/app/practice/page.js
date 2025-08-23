@@ -1,6 +1,8 @@
 "use client";
 import dynamic from 'next/dynamic';
 import { AppMode } from '../appmode.js';
+import AuthGate from "../../lib/AuthGate";
+
 
 const DynamicHome = dynamic(() => import('../home.js'), { ssr: false });
 
@@ -8,6 +10,8 @@ const DynamicHome = dynamic(() => import('../home.js'), { ssr: false });
 // この場合、MQTTは使わない？
 export default function Home() {
   return (
-    <DynamicHome appmode={AppMode.practice}/>
+    <AuthGate>
+      <DynamicHome appmode={AppMode.practice} />
+    </AuthGate>
   );
 }
