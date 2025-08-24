@@ -3,7 +3,7 @@
 
 import { cookies } from "next/headers";
 import { verifyToken, verifyCognitoToken } from "./jwt_proc";
-import type { AuthUser } from "types/user";
+import type { AuthUser } from "../types/user";
 
 export async function getUserFromCookies(): Promise<AuthUser> {
   const cookieStore = await cookies();
