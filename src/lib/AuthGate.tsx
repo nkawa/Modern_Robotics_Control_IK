@@ -47,7 +47,7 @@ export default function AuthGate({ noauth, children }: AuthGateProps) {
           if (noauth){
             console.log("No check browser for noauth practice:",userUUID)
           }else{  
-            window.location.href = window.location.host+"/nonuser"
+            window.location.href = "https://"+ window.location.host+"/nonuser"
             // 無許可のブラウザは PIN入力に戻る（なので、使えないｗ
             // ）
           }
@@ -58,7 +58,7 @@ export default function AuthGate({ noauth, children }: AuthGateProps) {
         set_loaded(user.loading)
         if (loaded){
           if (user.user === null && !noauth){
-            window.location.href =window.location.host+"/nonuser"
+            window.location.href = "https://" + window.location.host+"/nonuser"
           }
         }
 

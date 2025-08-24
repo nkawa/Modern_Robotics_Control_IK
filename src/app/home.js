@@ -102,6 +102,8 @@ export default function DynamicHome(props) {
 // WebRTCの統計情報を記録
   const [rtcStats, set_rtcStats, rtcStats_ref ] = useRefState(set_update,[])
 
+  const [target_error, set_target_error] = React.useState(false); // 衝突の際に色を変更する
+  const target_error_ref = React.useRef(target_error)
 
   const green_color = 'lime';
   const red_color = 'red';
@@ -262,13 +264,29 @@ export default function DynamicHome(props) {
               if (props.appmode !== AppMode.viewer) {
                 console.debug("Worker joint message:",
                   event.data.joints.map(x => x.toFixed(3)).join(', '));
+/*                if (target_error){// 前に衝突エラー状態で、
+                  console.log("WorkerLastJoints.curret",workerLastJoints.current,event.data.joints)
+                  if(workerLastJoints.current !== event.data.joints){
+                    set_target_error(false);
+                  }
+                }
+*/                    
               // Always skip to the latest data
                 workerLastJoints.current = event.data.joints;
               }
-            }
+            }                      
             break;
           case 'status':
-            workerLastStatus.current = event.data;
+            workerLastStatus.current = event.data; 
+            if (workerLastStatus.current.collision){
+              set_target_error(true);
+              target_error_ref.current = true;
+            }else{
+                console.log("tg",target_error, workerLastStatus.current.collision)
+              if (target_error_ref.current){// 通常は false なので。。。
+                set_target_error(false);
+              }
+            }
             break;
           case 'pose':
             // ignore info from worker for viewer mode
@@ -276,6 +294,11 @@ export default function DynamicHome(props) {
               workerLastPose.current = event.data;
             }
             break;
+
+//          case 'collision': // 衝突が Workerから通知された
+//            set_target_error(true); 
+ //           console.log("Collision")
+          
         }
       };
 
@@ -293,7 +316,9 @@ export default function DynamicHome(props) {
               '  manip:' + workerLastStatus.current?.manipulability.toFixed(3) +
               '  k:' + workerLastStatus.current?.sensitivity_scale.toFixed(3),
               '  limit flags: ' +
-              (workerLastStatus.current?.limit_flag || []).join(', '));
+              (workerLastStatus.current?.limit_flag || []).join(', ')+
+               '  collision:'+ workerLastStatus.current?.collision
+              );
           toolPointMover(0); // post mesasge to worker!
           break;
         case 'ToolPoint':
@@ -363,13 +388,13 @@ export default function DynamicHome(props) {
   const controllerMagnificationUsed = React.useRef(controllerMagnification.current);
   // *** a function that runs when the controller pose changes
   React.useEffect(() => {
-    console.log("Controller pose changed:", trigger_on,rendered, vrModeRef.current, endLinkPoseStart.current, baseLinkPoseInv.current);
+//    console.log("Controller pose changed:", trigger_on,rendered, vrModeRef.current, endLinkPoseStart.current, baseLinkPoseInv.current);
     // VR input period
     if (endLinkPoseStart.current !== null &&
       baseLinkPoseInv.current !== null &&
       rendered && vrModeRef.current && trigger_on) {
 
-      console.log("Controll started with trigger_on:", trigger_on);  
+//      console.log("Controll started with trigger_on:", trigger_on);  
       // base_B^{-1}: start^-1: controllerStartInv.current
       // base_E: goal: controllerCurrentWorld
       // base_S: begin: endLinkPoseStart.current
@@ -473,12 +498,13 @@ export default function DynamicHome(props) {
   // no grip for A and B
   React.useEffect(() => {
     let intervalId = null;
-    if (button_a_on) {
+    // 開閉を逆にした。こっちのほうが自然！
+    if (button_b_on) {
       intervalId = setInterval(() => {
         setThetaTool(prev => clampTool(prev + 0.5));
       }, 16.5);
     }
-    else if (button_b_on) {
+    else if (button_a_on) {
       intervalId = setInterval(() => {
         setThetaTool(prev => clampTool(prev - 0.5));
       }, 16.5);
@@ -635,7 +661,10 @@ export default function DynamicHome(props) {
     MQTT_ROBOT_STATE_TOPIC,
   });
 
-  const base_position = '0.65 0.75 0.4'
+  // 2025/8/25- デモ用config (位置)　本来は、調整可能にすべき。
+//  const base_position = '0.65 0.75 0.4'  // まあまあ
+//  const base_position = '0.65 0.64 0.3'　// 視点固定の場合
+  const base_position = '0.65 0.70 0.4'
   const base_rotation = '0 -180 0'
 
   // Robot State Update Props
@@ -662,6 +691,7 @@ export default function DynamicHome(props) {
       appmode={props.appmode}
       set_rtcStats={set_rtcStats}
       rtcStats_ref={rtcStats_ref}
+      target_error={target_error}
     // position_ee={pose_ee_Three.position}
     // euler_ee={pose_ee_Three.euler}
     // vr_controller_pos={vr_controller_pos}

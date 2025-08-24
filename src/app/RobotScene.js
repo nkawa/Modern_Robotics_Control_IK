@@ -53,12 +53,12 @@ export default function RobotScene(props) {
   const origin_marker_size = `${origin_marker_radius} ${origin_marker_radius} ${origin_marker_radius}`;
   const origin_marker_color = 'blue';
   const opacity = "0.3";
-  const end_link = (
-    <a-entity end-link position={`0 0 0`} rotation={`0 0 0`}>
+  const end_link = (//  end-link component で重要な作業をしているので、これは必須
+    <a-entity end-link position={`0 0 0`} rotation={`0 0 0`}>{/*
       <a-sphere
         scale={origin_marker_size}
         color={origin_marker_color}
-        visible={true} opacity={opacity}>
+        opacity={opacity}>
       </a-sphere>
       <a-cylinder position={`${cyl_length} 0 0`} rotation={`0 0 -90`}
         height={cyl_height} radius={cyl_radius} color="red" opacity={opacity} />
@@ -66,6 +66,7 @@ export default function RobotScene(props) {
         height={cyl_height} radius={cyl_radius} material='color: #00ff00' opacity={opacity} />
       <a-cylinder position={`0 0 ${cyl_length}`} rotation={`90 0 0`}
         height={cyl_height} radius={cyl_radius} color="blue" opacity={opacity} />
+        */}
     </a-entity>
   );
   // definition of the end link axes marker
@@ -88,6 +89,26 @@ export default function RobotScene(props) {
         height={con_hight} radius={con_radius} color="blue" />
     </a-entity>
   );
+
+    // practice 対応のロボットの下の部分
+  const RobotBase = (props) => {
+//    const offsetX = props.base_position - 0.50;// 本来は base_position から計算すべき！
+
+    if (props.appmode === AppMode.practice) { // 練習モードでは、四角い枠
+//          material={(props.target_error ? "color:#ff7f50;" : "color:#7BC8A4;") + " opacity: 0.7;"}>
+//          material="color:#7BC8A4; opacity: 0.7;">
+      return (
+        <a-entity id="robotBase" position={`0.25 0.69 0.35`} rotation="0 0 0" 
+          geometry="primitive: box; width: 1.2; height: 0.02; depth: 0.7;"
+          material={(props.target_error ? "color:#ff7f50;" : "color:#7BC8A4;") + " opacity: 0.7;"}>
+        </a-entity>
+      )
+    } else {
+      return (
+        <a-circle position={props.base_position} rotation="-90 0 0" radius={"0.3"} color={props.target_error ? "color:#ff7f50;" : "color:#7BC8A4;"} opacity="0.5"></a-circle>
+      )
+    }
+  }
 
   let rtc_message = "";
   if (props.appmode===AppMode.withCam || props.appmode === AppMode.withDualCam){
@@ -114,9 +135,11 @@ export default function RobotScene(props) {
 
 
         {/* VR Controller */}
-        <a-entity oculus-touch-controls="hand: right" vr-controller-right visible={true}></a-entity>
+        <a-entity oculus-touch-controls="hand: right; model: false" vr-controller-right visible={false}></a-entity>
+        {/*
         <a-circle position={robotProps.base_position} rotation="-90 0 0" radius={"0.3"} color={"#7BC8A4"} opacity="0.5"></a-circle>
-
+        */}
+        <RobotBase target_error={props.target_error} base_position={robotProps.base_position} appmode={props.appmode} />
         <Assets robot_model={robot_model} appmode={props.appmode} />
 
         {/* Robot */}
@@ -130,8 +153,8 @@ export default function RobotScene(props) {
         <a-entity id="rig" position={`${c_pos_x} ${c_pos_y} ${c_pos_z}`} rotation={`${c_deg_x} ${c_deg_y} ${c_deg_z}`}>
 
           {/* Camera */}
-          <a-camera id="camera" cursor="rayOrigin: mouse;" position="0 0 0" stereocam>
-            {/*
+          <a-camera id="camera" fov="60" zoom="0.9" cursor="rayOrigin: mouse;" position="0 0 0" stereocam>
+            {/* WebRTC Stat
             <a-entity
               text={`value: ${dsp_message}; color: ${dsp_color}; backgroundColor: rgb(31, 219, 131); border: #000000; whiteSpace: pre`}
               position="0 0.35 -1.4"
@@ -172,8 +195,8 @@ export default function RobotScene(props) {
 
         {/* End Link */}
         {end_link}
-        {/* End Link Axes */}
-        {controller_axes}
+        {/* End Link Axes 
+        {controller_axes}*/}
       </a-scene>
       {/*     <Controller {...controllerProps} />       
        <div className="footer">
