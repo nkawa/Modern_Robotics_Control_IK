@@ -97,8 +97,9 @@ export default function RobotScene(props) {
     if (props.appmode === AppMode.practice) { // 練習モードでは、四角い枠
 //          material={(props.target_error ? "color:#ff7f50;" : "color:#7BC8A4;") + " opacity: 0.7;"}>
 //          material="color:#7BC8A4; opacity: 0.7;">
+//        <a-entity id="robotBase" position={`0.25 0.69 0.35`} rotation="0 0 0" 
       return (
-        <a-entity id="robotBase" position={`0.25 0.69 0.35`} rotation="0 0 0" 
+        <a-entity id="robotBase" position={`0.25 0.74 0.20`} rotation="0 0 0" 
           geometry="primitive: box; width: 1.2; height: 0.02; depth: 0.7;"
           material={(props.target_error ? "color:#ff7f50;" : "color:#7BC8A4;") + " opacity: 0.7;"}>
         </a-entity>

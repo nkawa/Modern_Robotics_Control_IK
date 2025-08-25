@@ -17,7 +17,7 @@ export var mqttclient = null;
 export var idtopic = userUUID;
 
 // 本来であれば、デバイスIDなどを設定したい。（しかしブラウザは厳しい。Cookieでやるべき）
-export const connectMQTT = (callback) => {
+export const connectMQTT = (callback,optStr = "") => {
     if (mqttclient == null) {
         const client = new mqtt.connect(MQTT_BROKER_URL, {protocolVersion: 5}); // noLocal を指定するため Version5 で接続
         console.log("Initialize MQTT Client", client);
@@ -41,7 +41,8 @@ export const connectMQTT = (callback) => {
                 devType: devType,
                 codeType: codeType,
                 version: version,
-                devId: userUUID
+                devId: userUUID,
+                optStr: optStr
             }
             // this is Metawork-MQTT protocol
             client.publish('mgr/register', JSON.stringify(info)) // for other devices.// maybe retransmit each 10seconds

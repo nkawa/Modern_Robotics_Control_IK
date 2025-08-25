@@ -664,7 +664,7 @@ export default function DynamicHome(props) {
   // 2025/8/25- デモ用config (位置)　本来は、調整可能にすべき。
 //  const base_position = '0.65 0.75 0.4'  // まあまあ
 //  const base_position = '0.65 0.64 0.3'　// 視点固定の場合
-  const base_position = '0.65 0.70 0.4'
+  const base_position = '0.65 0.75 0.15'
   const base_rotation = '0 -180 0'
 
   // Robot State Update Props
