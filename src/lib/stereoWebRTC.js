@@ -23,7 +23,7 @@ let lastStatBytes = 0;
 export default function StereoVideo(props) {
     const { rendered, stereo_visible, set_rtcStats,appmode } = props
     const [objectRender, setObjectRender] = React.useState(false)
-    const set_RealSense = (appmode === AppMode.withDualCam); //realsenseを使う場合はtrueにする
+    const set_RealSense = (appmode === AppMode.withDualCam || appmode === AppMode.monitor); //realsenseを使う場合はtrueにする
 
 
     // statsReport 定期的に更新

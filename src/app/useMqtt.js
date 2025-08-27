@@ -46,8 +46,14 @@ export default function useMqtt({
         return;
       }
 
+
       if (props.appmode != AppMode.viewer) {
-        window.mqttClient = connectMQTT(requestRobot);
+        if (mqttclient != null){  
+            window.mqttClient = mqttclient;
+            requestRobot(mqttclient);
+        }else{
+          window.mqttClient = connectMQTT(requestRobot);
+        }
       } else { // Viewer modeでは、 request しない
         window.mqttClient = connectMQTT();
       }
@@ -160,12 +166,15 @@ export default function useMqtt({
                           joints: myJoints
                       });
                       // 本当は、上記で pose が来て初めてOKのはず
-                    window.setTimeout(() => {
-                      console.log("Start to send movement!", robotIDRef.current);
-                      receive_state = true; // 受信状態にする
-                    publishMQTT("dev/" + robotIDRef.current, JSON.stringify({ controller: "browser", devId: idtopic })) // 自分の topic を教える
-                      },300);
-                      });
+                    // Monitor mode では送らない
+                      if(props.appmode !== AppMode.monitor){
+                        window.setTimeout(() => {
+                          console.log("Start to send movement!", robotIDRef.current);
+                          receive_state = true; // 受信状態にする
+                        publishMQTT("dev/" + robotIDRef.current, JSON.stringify({ controller: "browser", devId: idtopic })) // 自分の topic を教える
+                        },300);
+                      }
+                    });
                   }
                 }else{
                   console.warn("Worker is not ready, can't set initial joints");
@@ -179,8 +188,9 @@ export default function useMqtt({
             setThetaTool(prev => {
               return toolAngle;
             });
-
-            firstReceiveJoint = false
+            if(props.appmode !== AppMode.monitor){
+              firstReceiveJoint = false
+            }
           }
 
           // すでに位置が動いていたら

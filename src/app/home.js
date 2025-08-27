@@ -282,7 +282,7 @@ export default function DynamicHome(props) {
               set_target_error(true);
               target_error_ref.current = true;
             }else{
-                console.log("tg",target_error, workerLastStatus.current.collision)
+//                console.log("tg",target_error, workerLastStatus.current.collision)
               if (target_error_ref.current){// 通常は false なので。。。
                 set_target_error(false);
               }
@@ -555,6 +555,7 @@ export default function DynamicHome(props) {
       vrModeRef,
       // controller_object,
       // Euler_order,
+
       props,
       onXRFrameMQTT,
       workerLastJoints,

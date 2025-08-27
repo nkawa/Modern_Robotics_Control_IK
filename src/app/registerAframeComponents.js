@@ -258,7 +258,7 @@ export default function registerAframeComponents(options) {
       this.el.addEventListener('enter-vr', () => {
         vrModeRef.current = true;
         console.log('enter-vr');
-        if (props.appmode !== AppMode.viewer) {
+        if (props.appmode !== AppMode.viewer && props.appmode !== AppMode.monitor) { // monitor では　publish しない
           let xrSession = this.el.renderer.xr.getSession();
           xrSession.requestAnimationFrame(onXRFrameMQTT);
         }

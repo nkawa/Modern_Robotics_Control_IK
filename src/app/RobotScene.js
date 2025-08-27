@@ -99,14 +99,17 @@ export default function RobotScene(props) {
 //          material="color:#7BC8A4; opacity: 0.7;">
 //        <a-entity id="robotBase" position={`0.25 0.69 0.35`} rotation="0 0 0" 
       return (
-        <a-entity id="robotBase" position={`0.25 0.74 0.20`} rotation="0 0 0" 
-          geometry="primitive: box; width: 1.2; height: 0.02; depth: 0.7;"
-          material={(props.target_error ? "color:#ff7f50;" : "color:#7BC8A4;") + " opacity: 0.7;"}>
-        </a-entity>
+         <a-box id="robotBase" position={`0.25 0.74 0.20`}  rotation="0 0 0" shadow="receive: true;"
+          width="1.2" height="0.02" depth="0.7" color={props.target_error ? "#ff7f50" : "#7BC8A4"}
+          opacity="0.7"></a-box>
       )
+//        <a-entity id="robotBase" position={`0.25 0.74 0.20`} rotation="0 0 0" 
+ //         geometry="primitive: box; width: 1.2; height: 0.02; depth: 0.7;"
+  //        material={(props.target_error ? "color: #ff7f50;" : "color: #7bc8a4;") + " opacity: 0.7;"}>
+   //     </a-entity>
     } else {
       return (
-        <a-circle position={props.base_position} rotation="-90 0 0" radius={"0.3"} color={props.target_error ? "color:#ff7f50;" : "color:#7BC8A4;"} opacity="0.5"></a-circle>
+        <a-circle position={props.base_position} rotation="-90 0 0" radius={"0.3"} color={props.target_error ? "#ff7f50" : "#7BC8A4"} opacity="0.5"></a-circle>
       )
     }
   }
@@ -128,7 +131,7 @@ export default function RobotScene(props) {
     <>
       <a-scene scene xr-mode-ui={`enabled: ${!(props.appmode===AppMode.viewer)?'true':'false'}; XRMode: xr`}>
       {  // ステレオカメラ使うか
-      (props.appmode===AppMode.withCam || props.appmode === AppMode.withDualCam)?
+      (props.appmode===AppMode.withCam || props.appmode === AppMode.withDualCam || props.appmode === AppMode.monitor)?
         <StereoVideo rendered={rendered} set_rtcStats={set_rtcStats} stereo_visible='true'
           appmode={props.appmode}
        />: <></>       
