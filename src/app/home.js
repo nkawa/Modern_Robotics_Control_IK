@@ -19,9 +19,10 @@ import { AppMode } from './appmode.js';
 // MQTT Topics
 const MQTT_REQUEST_TOPIC = "mgr/request";
 const MQTT_DEVICE_TOPIC = "dev/" + idtopic;
-const MQTT_CTRL_TOPIC = "control/" ;
-const MQTT_CTRL_TOPIC_ID = "control/"+idtopic ;
+const MQTT_CTRL_TOPIC = "control/";
+const MQTT_CTRL_TOPIC_ID = "control/" + idtopic;
 const MQTT_ROBOT_STATE_TOPIC = "robot/";
+const MQTT_AIST_LOGGER_TOPIC = "AIST/logger/Jaka";
 
 console.log("MQTT_DEVICE_TOPIC", MQTT_DEVICE_TOPIC);
 
@@ -66,12 +67,34 @@ export default function DynamicHome(props) {
   const vrModeRef = React.useRef(false);
   const [trigger_on, set_trigger_on] = React.useState(false)
   const [grip_on, set_grip_on] = React.useState(false)
+  const [gripValue, set_grip_value] = React.useState(0);
   const [button_a_on, set_button_a_on] = React.useState(false)
   const [button_b_on, set_button_b_on] = React.useState(false)
   const [controller_object, set_controller_object] = React.useState(() => {
     const controller_object = new THREE.Matrix4();
     return controller_object;
   });
+
+  const [controller_object_world, set_controller_object_world] = React.useState(null);
+  const [camera_object_world, set_camera_object_world] = React.useState(null);
+
+  //常に最新を読むためのRef
+  const controllerObjectWorldRef = React.useRef(null);
+  const cameraObjectWorldRef = React.useRef(null);
+  const gripValueRef = React.useRef(0);
+  const buttonARef = React.useRef(false);
+  const buttonBRef = React.useRef(false);
+  const triggerRef = React.useRef(false);
+  const gripRef = React.useRef(false);
+
+  //state → ref
+  React.useEffect(() => { controllerObjectWorldRef.current = controller_object_world; }, [controller_object_world]);
+  React.useEffect(() => { cameraObjectWorldRef.current = camera_object_world; }, [camera_object_world]);
+  React.useEffect(() => { gripValueRef.current = gripValue; }, [gripValue]);
+  React.useEffect(() => { buttonARef.current = button_a_on; }, [button_a_on]);
+  React.useEffect(() => { buttonBRef.current = button_b_on; }, [button_b_on]);
+  React.useEffect(() => { triggerRef.current = trigger_on; }, [trigger_on]);
+  React.useEffect(() => { gripRef.current = grip_on; }, [grip_on]);
 
   const [selectedMode, setSelectedMode] = React.useState('control');
   const [toolCaught, setToolCaught] = React.useState(false); // アームの把持状態
@@ -85,7 +108,6 @@ export default function DynamicHome(props) {
    //     set_c_deg_x(0);
  //       set_c_deg_y(0);
    //     set_c_deg_z(0);
-
 
   const [c_pos_x, set_c_pos_x] = React.useState(0)
   const [c_pos_y, set_c_pos_y] = React.useState(0.9)
@@ -497,6 +519,7 @@ export default function DynamicHome(props) {
 
   // no grip for A and B
   React.useEffect(() => {
+    console.log("React.useEffect() of a and b starts.");
     let intervalId = null;
     // 開閉を逆にした。こっちのほうが自然！
     if (button_b_on) {
@@ -541,15 +564,30 @@ export default function DynamicHome(props) {
     // DynamicsControl
   ]);
 
+  //#Added
+  const setTrigger = (v) => { triggerRef.current = !!v; set_trigger_on(!!v); };
+  const setGrip    = (v) => { gripRef.current    = !!v; set_grip_on(!!v);   };
+  const setA       = (v) => { buttonARef.current = !!v; set_button_a_on(!!v); };
+  const setB       = (v) => { buttonBRef.current = !!v; set_button_b_on(!!v); };
+  const setGripVal = (v) => { 
+    gripValueRef.current = (typeof v === 'number' ? v : 0); 
+    set_grip_value(gripValueRef.current); 
+  };
+
   // VRController Inputs (Aframe Components)
   React.useEffect(() => {
     registerAframeComponents({
       robotChange,
       set_controller_object,
-      set_trigger_on,
-      set_grip_on,
-      set_button_a_on,
-      set_button_b_on,
+      set_controller_object_world,
+      set_camera_object_world,
+      // ↓↓↓ ここをラッパーに差し替え ↓↓↓
+      set_trigger_on: setTrigger,
+      set_grip_on:    setGrip,
+      set_grip_value: setGripVal,
+      set_button_a_on: setA,
+      set_button_b_on: setB,
+      // ↑↑↑ 差し替えここまで ↑↑↑
       set_c_pos_x, set_c_pos_y, set_c_pos_z,
       set_c_deg_x, set_c_deg_y, set_c_deg_z,
       vrModeRef,
@@ -558,6 +596,7 @@ export default function DynamicHome(props) {
 
       props,
       onXRFrameMQTT,
+      onXRFrameRecordMQTT,
       workerLastJoints,
       setThetaBody,
       endLinkPose,
@@ -637,6 +676,66 @@ export default function DynamicHome(props) {
       publishMQTT(MQTT_CTRL_TOPIC_ID, ctl_json);
     }
   }
+
+  const onXRFrameRecordMQTT = (time, frame) => {
+    if (vrModeRef.current) {
+      frame.session.requestAnimationFrame(onXRFrameRecordMQTT);
+      setNow(performance.now());
+    }
+    if ((mqttclient != null) && receiveStateRef.current) {
+
+      const ctrlInputs = {
+        gripvalue: typeof gripValueRef.current === "number" ? gripValueRef.current : 0,
+        grip: !!gripRef.current,
+        trigger: !!triggerRef.current,
+        a: !!buttonARef.current,
+        b: !!buttonBRef.current,
+        axis: { x: 0, y: 0 },
+      };
+
+      const P = new THREE.Vector3();
+      const Q = new THREE.Quaternion();
+      const S = new THREE.Vector3();
+
+      let controllerBlock = undefined;
+      if (controllerObjectWorldRef.current) {
+        const m4 = controllerObjectWorldRef.current;// three の matrixWorld をそのまま
+        m4.decompose(P, Q, S);
+        Q.normalize();
+        controllerBlock = {
+          pos: { x: P.x, y: P.y, z: P.z },
+          qua: { x: Q.x, y: Q.y, z: Q.z, w: Q.w },
+          inputs: ctrlInputs,
+        };
+      }
+
+      let headsetBlock = undefined;
+      if (cameraObjectWorldRef.current) {
+        const m4 = cameraObjectWorldRef.current;// three の matrixWorld をそのまま
+        m4.decompose(P, Q, S);
+        Q.normalize();
+        headsetBlock = {
+          pos: { x: P.x, y: P.y, z: P.z },
+          qua: { x: Q.x, y: Q.y, z: Q.z, w: Q.w },
+        };
+      }
+
+      const ctl_json = JSON.stringify({
+        time: Date.now(),
+        joints: degreeBodyMQTT.current,
+        tool: thetaToolMQTT.current,
+        grip: !!gripRef.current,
+        trigger: !!triggerRef.current,
+        a: !!buttonARef.current,
+        b: !!buttonBRef.current,
+        controller: controllerBlock,
+        headset: headsetBlock,
+      });
+
+      //console.log("[MQTT SEND Record]", ctl_json);
+      publishMQTT(MQTT_AIST_LOGGER_TOPIC, ctl_json);
+    }
+  };
 
   const requestRobot = (mqclient) => {
     const requestInfo = {

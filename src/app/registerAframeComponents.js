@@ -19,8 +19,11 @@ export default function registerAframeComponents(options) {
   const {
     robotChange,
     set_controller_object,
+    set_controller_object_world,
+    set_camera_object_world,
     set_trigger_on,
     set_grip_on,
+    set_grip_value,
     set_button_a_on,
     set_button_b_on,
     set_c_pos_x, set_c_pos_y, set_c_pos_z,
@@ -30,6 +33,7 @@ export default function registerAframeComponents(options) {
     // Euler_order,
     props,
     onXRFrameMQTT,
+    onXRFrameRecordMQTT,
     workerLastJoints,
     setThetaBody,
     endLinkPose,
@@ -77,37 +81,81 @@ export default function registerAframeComponents(options) {
   AFRAME.registerComponent('vr-controller-right', {
     schema: { type: 'string', default: '' },
     init: function () {
-      // set_controller_object(this.el.object3D.MatrixWorld);
-      // this.el.object3D.rotation.order = Euler_order;
-      // Trigger 
+      //Trigger (digital)
       this.el.addEventListener('triggerdown', () => {
-        console.log("Trigger down");
-        set_trigger_on(true)
-      }
-      );
+        set_trigger_on(true);
+      });
       this.el.addEventListener('triggerup', () => set_trigger_on(false));
 
-      // Gripper
-      this.el.addEventListener('gripdown', () => set_grip_on(true));
-      this.el.addEventListener('gripup', () => set_grip_on(false));
+      //Grip (analog & digital)
+      const applyGripValue = (v) => {
+        const n = (typeof v === 'number') ? v : 0;
+        set_grip_value?.(n);
+      };
+      const gripAnalogHandler = (evt) => {
+        const v =
+          evt?.detail?.value ??
+          evt?.detail?.state?.value ??
+          evt?.detail?.axisValue ??
+          0;
+        applyGripValue(v);
+      };
+      //#Added
+      // 多くの実装で来るイベント
+      this.el.addEventListener('gripchanged', gripAnalogHandler);
+      // 一部実装で来る squeeze 系
+      this.el.addEventListener('squeezechanged', gripAnalogHandler);
+      this.el.addEventListener('squeeze', gripAnalogHandler);
 
-      // A/B
+      //#Added
+      // 汎用の buttonchanged から id=grip を検出
+      this.el.addEventListener('buttonchanged', (evt) => {
+        const id = (evt?.detail?.id || evt?.detail?.name || '').toString().toLowerCase();
+        if (id === 'grip') gripAnalogHandler(evt);
+      });
+
+      //#Added
+      // デジタル on/off（フォールバック）
+      this.el.addEventListener('gripdown', () => { set_grip_on(true);  });
+      this.el.addEventListener('gripup',   () => { set_grip_on(false); });
+
+      // squeeze のデジタル on/off（フォールバック）
+      this.el.addEventListener('squeezestart', () => { set_grip_on(true);  applyGripValue(1); });
+      this.el.addEventListener('squeezeend',   () => { set_grip_on(false); applyGripValue(0); });
+
+      // === A / B buttons ===
+      // まずは down/up をそのまま使う
       this.el.addEventListener('abuttondown', () => set_button_a_on(true));
-      this.el.addEventListener('abuttonup', () => set_button_a_on(false));
+      this.el.addEventListener('abuttonup',   () => set_button_a_on(false));
       this.el.addEventListener('bbuttondown', () => set_button_b_on(true));
-      this.el.addEventListener('bbuttonup', () => set_button_b_on(false));
+      this.el.addEventListener('bbuttonup',   () => set_button_b_on(false));
+      // 互換: changed イベントが来る環境
+      this.el.addEventListener('abuttonchanged', (e) => {
+        const pressed = !!(e?.detail?.state?.pressed ?? e?.detail?.pressed);
+        set_button_a_on(pressed);
+      });
+      this.el.addEventListener('bbuttonchanged', (e) => {
+        const pressed = !!(e?.detail?.state?.pressed ?? e?.detail?.pressed);
+        set_button_b_on(pressed);
+      });
+      // 完全フォールバック: 汎用 buttonchanged から A/B を拾う
+      this.el.addEventListener('buttonchanged', (e) => {
+        const idRaw = e?.detail?.id ?? e?.detail?.name ?? '';
+        const id = idRaw.toString().toLowerCase();
+        const pressed = !!(e?.detail?.state?.pressed ?? e?.detail?.pressed ?? (e?.detail?.value > 0.5));
+        if (id === 'a') set_button_a_on(pressed);
+        if (id === 'b') set_button_b_on(pressed);
+      });
 
+      // === Thumbstick ===
       this.el.addEventListener('thumbstickmoved', this.logThumbstick);
+
       this.lastPose = new THREE.Matrix4();
       this.count = 0;
       this.detail_x_prev = 0;
       this.detail_y_prev = 0;
     },
     logThumbstick: function (evt) {
-//      if (this.detail_x_prev <= 0.35 && evt.detail.x > 0.35) {
-//        controllerModeChange(1);
-//        console.log("RIGHT", controllerModeChange(0));
-//      }
       const controllerMode = controllerModeChange(0);
       switch (controllerMode) {
         case 'Normal':
@@ -124,7 +172,7 @@ export default function registerAframeComponents(options) {
             console.debug("MAGNIFICATION RESET", controllerMagnification.current);
           }
           if (evt.detail.x < -0.35) {
-            console.log("LEFT", evt.detail.x);
+            // console.log("LEFT", evt.detail.x);
             setSlowRewindMode(true);
           } else {
             setSlowRewindMode(false);
@@ -150,23 +198,17 @@ export default function registerAframeComponents(options) {
       controllerCoord = obj;
       obj.getWorldPosition(controllerPosition);
       const pose = obj.matrixWorld;
+      set_controller_object_world(pose);
       if (this._my_init_flag) {
         if (!pose.equals(this.lastPose)) {
           const controllerBase = baseLinkPoseInv.current.clone().multiply(pose);
           set_controller_object(controllerBase);
-          //
-          // // **** debugging output ****
-          // const position = new THREE.Vector3();
-          // position.setFromMatrixPosition(this.el.object3D.matrixWorld);
-          // position.applyMatrix4(three2worldMat); // convert to world coord.
-          // console.debug("controller position: " + position.x.toFixed(3)
-          // 	      + ", " + position.y.toFixed(3)
-          // 	      + ", " + position.z.toFixed(3));
-          // controllerUpdater();
+          set_controller_object_world?.(pose);
         }
       } else {
         const controllerBase = baseLinkPoseInv.current.clone().multiply(pose);
         set_controller_object(controllerBase);
+        set_controller_object_world?.(pose);
         this._my_init_flag = true;
       }
       ++this.count;
@@ -261,6 +303,12 @@ export default function registerAframeComponents(options) {
         if (props.appmode !== AppMode.viewer && props.appmode !== AppMode.monitor) { // monitor では　publish しない
           let xrSession = this.el.renderer.xr.getSession();
           xrSession.requestAnimationFrame(onXRFrameMQTT);
+          xrSession.requestAnimationFrame(onXRFrameRecordMQTT);
+        }
+        // === HMD object3D の受け渡し ===
+        const camEl = document.querySelector('#camera');
+        if (camEl?.object3D) {
+          set_camera_object_world?.(camEl.object3D.matrixWorld);
         }
         set_c_pos_x(0);
         set_c_pos_y(-0.3);
