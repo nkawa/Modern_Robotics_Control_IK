@@ -22,6 +22,33 @@ const Line = (props) => {
 const nostats = (process.env.NEXT_PUBLIC_SHOW_STATS || "YES")=="NO"
 console.log("Nostat:",nostats)
 
+function getWorldEuler(obj, order = 'XYZ'){
+  // 親まで含めた最新のワールド行列を更新
+  if(obj){
+    obj.updateMatrixWorld(true);
+  // ワールド姿勢をクォータニオンで取得
+    const qWorld = new THREE.Quaternion();
+    obj.getWorldQuaternion(qWorld);
+
+  // クォータニオン→オイラー（順序は必要に応じて指定）
+    const eWorld = new THREE.Euler(0, 0, 0, order);
+    eWorld.setFromQuaternion(qWorld, order);
+
+    return eWorld; // ラジアン
+  }
+  return null;
+}
+  const round = (x, d = 5) => {
+    const v = 10 ** (d | 0)
+    return Math.round(x * v) / v
+  }
+  const normalize180 = (angle) => {
+    if (Math.abs(angle) === 180) {
+      return angle
+    }
+    return ((angle + 180) % 360 + 360) % 360 - 180
+  }
+
 export default function RobotScene(props) {
   const {
     robot_model, rendered, robotProps, controllerProps,
@@ -43,6 +70,51 @@ export default function RobotScene(props) {
       </a-scene>
     );
   }
+
+  // 前後のずれを可視化したい
+  const FrontLine = ()=> {
+    //ガイドを表示したい
+    const flink = document.getElementById('final_link');
+    if (flink){
+      const we = getWorldEuler(flink.getObject3D("mesh"))
+      if (we){
+      we.z = we.z + Math.PI/4;
+      const angleX = THREE.MathUtils.radToDeg(we.x)-90
+      const angleY = -THREE.MathUtils.radToDeg(we.y)
+      const angleZ = normalize180(THREE.MathUtils.radToDeg(we.z)+180)
+      const zx = Math.cos(-we.z)*0.12
+      const zy = Math.sin(-we.z)*0.12
+      return {
+        angleStr:`${round(angleX,1)},${round(angleY,1)},${round(angleZ,1)}`,
+        zPosL: `${zx-0.25} ${zy+0.1} -0.799`,
+        zPosR: `${-zx-0.25} ${-zy+0.1} -0.799`,
+        zRot : `0 0 ${90-angleZ}`,
+        yPos: `${angleY/45-0.25} 0.24 -0.799`,
+        xPos: `-0.056 ${angleX/45+0.1} -0.799`
+       }
+      }
+    }
+      return {
+        angleStr:"",
+        zPosL: "-0.27  0.1 -0.799",
+        zPosR: "-0.13  0.1 -0.799",
+        zRot : "0 0 90",
+        yPos:  "0.25 0.24 -0.799",
+        xPos:  "-0.056 0.1 -0.799"
+      }
+    
+  }
+  const {angleStr , yPos, xPos, zPosL, zPosR, zRot}= FrontLine()
+
+  const frontLineObj =( <>
+                <a-plane position="-0.25 0.24 -0.7995" rotation="0 0 90" width="0.013" height="0.003" color="blue" />
+              <a-plane position={yPos} rotation="0 0 90" width="0.015" height="0.005" color="red" />
+              <a-plane position={xPos} rotation="0 0 90" width="0.005" height="0.015" color="red" />
+              <a-plane position="-0.056  0.1 -0.7995" rotation="0 0 90" width="0.003" height="0.013" color="blue" />
+
+              <a-plane position={zPosL} rotation={zRot} width="0.005" height="0.018" color="pink" opacity="0.9" />
+              <a-plane position={zPosR} rotation={zRot} width="0.005" height="0.018" color="pink" opacity="0.9" />
+  </>)
 
   // definition of the end link axes marker
   const axis_length = 0.050;
@@ -164,8 +236,13 @@ export default function RobotScene(props) {
               position="0 0.35 -1.4"
             />*/}
             <a-entity id="UIBack">
-
+                 {(props.appmode === AppMode.practice) ?
+                  <a-plane id="virtualMonitor" position='-0.25 .1 -0.8' scale='0.25 0.25 1' width='1.6' height='1.2'
+                  material="shader: standard" visible="true"></a-plane>:
+                  <></>
+                  }
             </a-entity>
+            {frontLineObj}
             {nostats?<></>:
             <a-entity
                 text={`value: ${rtc_message}; color: gray; backgroundColor: rgb(31, 219, 131); border: #000000; whiteSpace: pre`}

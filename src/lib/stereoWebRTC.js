@@ -386,8 +386,10 @@ export default function StereoVideo(props) {
             if (set_RealSense) {
                 const videoPlane = document.createElement('a-plane');
                 videoPlane.setAttribute('id', 'videoPlate');
-                videoPlane.setAttribute('position', '-0.10 .1 -0.53');
-                videoPlane.setAttribute('scale', '0.12 0.12 1');
+                videoPlane.setAttribute('position', '-0.25 .1 -0.8');
+                videoPlane.setAttribute('scale', '0.25 0.25 1');
+//                videoPlane.setAttribute('position', '-0.10 .1 -0.53');
+//                videoPlane.setAttribute('scale', '0.12 0.12 1');
                 videoPlane.setAttribute('width', '1.6');
                 videoPlane.setAttribute('height', '1.2');
                 videoPlane.setAttribute('material', 'src: #remotevideo-realsense;');

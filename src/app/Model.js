@@ -120,7 +120,7 @@ const jaka_zu_5_Model = (props) => {
                 {/* J5 */}
                 <a-entity j_id="5" gltf-model="#j5" position={`${W_45} ${L_56} 0.0`} rotation={`0 ${theta5-90} 0 `} model-opacity={opacity}>
                   {/* J6 */}
-                 <a-entity j_id="6" gltf-model="#j6" position={`0 0 0`} rotation={`0 0 ${(theta6)+90}`} model-opacity={opacity}>
+                 <a-entity id="final_link" j_id="6" gltf-model="#j6" position={`0 0 0`} rotation={`0 0 ${(theta6)+90}`} model-opacity={opacity}>
                     {/* Tool */}
                     <a-entity gltf-model="#j6_1" position='0.01 0 0.15' rotation='0 180 -45' model-opacity={opacity}> 
                       {/* 把持状態の表示 */}
