@@ -270,7 +270,7 @@ export default function DynamicHome(props) {
             workerRef.current
               .postMessage({
                 type: 'set_exact_solution',
-                exactSolution: false
+                exactSolution: false // ここで 特異点に入るかの変更が可能
               });
             workerRef.current
               .postMessage({

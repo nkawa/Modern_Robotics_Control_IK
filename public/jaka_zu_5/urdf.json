@@ -163,7 +163,7 @@
     },
     "limit": {
       "$": {
-        "lower": -3.05,
+        "lower": 0.01,
         "upper": 3.05,
         "effort": 5000,
         "velocity": 3.14
